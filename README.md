@@ -1,17 +1,40 @@
-## My Project
 
-TODO: Fill this README out!
+# Welcome to your CDK Python project!
 
-Be sure to:
+Login to the AWS Console.
 
-* Change the title in this README
-* Edit your repository description on GitHub
+Open Cloudshell
 
-## Security
+Clone this git repository
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+Create a virtualenv:
 
-## License
+```
+$ python3 -m venv .venv
+```
 
-This library is licensed under the MIT-0 License. See the LICENSE file.
+After the init process completes and the virtualenv is created, you can use the following
+step to activate your virtualenv.
 
+```
+$ source .venv/bin/activate
+```
+
+
+Once the virtualenv is activated, you can install the required dependencies.
+
+```
+$ pip install -r requirements.txt
+```
+
+Check the stacks and resources that CDK will deploy
+
+```
+$ cdk diff
+```
+
+Deploy all stacks
+
+```
+$ cdk deploy --all
+```

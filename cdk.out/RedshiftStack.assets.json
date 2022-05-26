@@ -1,0 +1,19 @@
+{
+  "version": "18.0.0",
+  "files": {
+    "af42a017b5df1dcd3eb45d702bee6297282e62e5b8a2af748d973a36f93006be": {
+      "source": {
+        "path": "RedshiftStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "current_account-current_region": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "af42a017b5df1dcd3eb45d702bee6297282e62e5b8a2af748d973a36f93006be.json",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

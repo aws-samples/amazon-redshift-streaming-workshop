@@ -1,0 +1,408 @@
+{
+ "Resources": {
+  "StepFunctionsRole4FE5099D": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": {
+         "Fn::Join": [
+          "",
+          [
+           "states.",
+           {
+            "Ref": "AWS::Region"
+           },
+           ".amazonaws.com"
+          ]
+         ]
+        }
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "StepFunctionStack/StepFunctions/Role/Resource"
+   }
+  },
+  "StepFunctionsRoleDefaultPolicy8C8819ED": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "redshift-data:*",
+        "redshift:GetClusterCredentials"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "StepFunctionsRoleDefaultPolicy8C8819ED",
+    "Roles": [
+     {
+      "Ref": "StepFunctionsRole4FE5099D"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StepFunctionStack/StepFunctions/Role/DefaultPolicy/Resource"
+   }
+  },
+  "StepFunctionsFFB27117": {
+   "Type": "AWS::StepFunctions::StateMachine",
+   "Properties": {
+    "RoleArn": {
+     "Fn::GetAtt": [
+      "StepFunctionsRole4FE5099D",
+      "Arn"
+     ]
+    },
+    "DefinitionString": {
+     "Fn::Join": [
+      "",
+      [
+       "{\"StartAt\":\"Submit\",\"States\":{\"Submit\":{\"Next\":\"Wait\",\"Type\":\"Task\",\"ResultPath\":\"$.sql_output\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::aws-sdk:redshiftdata:executeStatement\",\"Parameters\":{\"ClusterIdentifier\":\"",
+       {
+        "Fn::ImportValue": "RedshiftStack:ExportsOutputRefredshiftStreamingClusterBB5BF2EF"
+       },
+       "\",\"Database\":\"streaming_db\",\"DbUser\":\"admin\",\"Sql\":\"REFRESH MATERIALIZED VIEW customer_stream;\\n            REFRESH MATERIALIZED VIEW order_stream;\",\"StatementName\":\"LoadDatatoRedshift\",\"WithEvent\":true}},\"Complete\":{\"Type\":\"Choice\",\"Choices\":[{\"Variable\":\"$.Result.Status\",\"StringEquals\":\"FAILED\",\"Next\":\"Submit\"},{\"Variable\":\"$.Result.Status\",\"StringEquals\":\"NA\",\"Next\":\"Fail\"},{\"Variable\":\"$.Result.Status\",\"StringEquals\":\"FINISHED\",\"Next\":\"Submit\"}],\"Default\":\"Wait\"},\"Status\":{\"Next\":\"Complete\",\"Type\":\"Task\",\"ResultPath\":\"$.Result\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::aws-sdk:redshiftdata:describeStatement\",\"Parameters\":{\"Id.$\":\"$.sql_output.Id\"}},\"Wait\":{\"Type\":\"Wait\",\"Seconds\":5,\"Next\":\"Status\"},\"Fail\":{\"Type\":\"Fail\",\"Error\":\"$.Result.Error\",\"Cause\":\"Redshift Data API statement failed\"}},\"TimeoutSeconds\":60}"
+      ]
+     ]
+    }
+   },
+   "DependsOn": [
+    "StepFunctionsRoleDefaultPolicy8C8819ED",
+    "StepFunctionsRole4FE5099D"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "StepFunctionStack/StepFunctions/Resource"
+   }
+  },
+  "StepFunctionsEventsRole23941DEF": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "events.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "StepFunctionStack/StepFunctions/EventsRole/Resource"
+   }
+  },
+  "StepFunctionsEventsRoleDefaultPolicy3203ADFA": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "states:StartExecution",
+       "Effect": "Allow",
+       "Resource": {
+        "Ref": "StepFunctionsFFB27117"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "StepFunctionsEventsRoleDefaultPolicy3203ADFA",
+    "Roles": [
+     {
+      "Ref": "StepFunctionsEventsRole23941DEF"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StepFunctionStack/StepFunctions/EventsRole/DefaultPolicy/Resource"
+   }
+  },
+  "StepTriggerF2203960": {
+   "Type": "AWS::Events::Rule",
+   "Properties": {
+    "ScheduleExpression": "rate(1 minute)",
+    "State": "ENABLED",
+    "Targets": [
+     {
+      "Arn": {
+       "Ref": "StepFunctionsFFB27117"
+      },
+      "Id": "Target0",
+      "RoleArn": {
+       "Fn::GetAtt": [
+        "StepFunctionsEventsRole23941DEF",
+        "Arn"
+       ]
+      }
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StepFunctionStack/StepTrigger/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/1VOuw6CMBT9FvZyVZgcDYmbCYHBkdRyDVdKa+gthJD+uzwcdDrPnJwEkhSOkRxdrOo21vSAuWSpWrFY1ewY309vFJM1rmLpWgeZ1PoyuhL7gRSKvwrMd0ksssau0VWSFssa402qhgyK7Gl+dRAkO5gLq7dow9xqUtMqdxYEDmh4mS78t7ZgCBtDZ32vNjezpqb1RBD5xI01hxTOcIpejijuvWHqEIodP7iKx8D2AAAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "StepFunctionStack/CDKMetadata/Default"
+   },
+   "Condition": "CDKMetadataAvailable"
+  }
+ },
+ "Conditions": {
+  "CDKMetadataAvailable": {
+   "Fn::Or": [
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "af-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-northwest-1"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "sa-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-2"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-west-2"
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}
