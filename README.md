@@ -5,11 +5,15 @@ Most organisations today agree that data is one of their most important asset an
 
 In this workshop, we will show how easy it is to build a streaming analytics application using this new feature. We will create a near-real time logistics dashboard using Amazon Managed Grafana to provide augmented intelligence and situational awareness for the logistics operations team. It connects to a Redshift cluster that uses this new streaming feature to load data from a Kinesis data stream. 
 
+![image-20220601123345968](./images/image-20220601123345968.png)
+
+
+
 ### Infrastructure Provisioning using CDK and Cloudshell
 
 The AWS Cloud Development Kit (AWS CDK) is an open-source project that allows you to define your cloud infrastructure using your familiar programming languages. In the case of this workshop, we are using python to define the cloud infrastructure as it is one of the more commonly used languages used by analytics professionals.
 
-Note: This workshop will work for any AWS region where AWS Cloudshell is available. However the workshop's instructions will be using us-east-1 and the links provided will work for this region. (This can also be deployed in regions without Cloudshell but will require additional steps to provision an EC2 Linux deployment instance.) 
+Note: This workshop will work for any AWS region where AWS Cloudshell is available. However the workshop's instructions will be using the us-east-1 region (This can also be deployed in regions without Cloudshell but will require additional steps to provision an EC2 Linux deployment instance.) 
 
 Note: In order for you to run this code you will need elevated privileges into the AWS account you are using.
 
@@ -53,7 +57,7 @@ Once the virtualenv is activated, you can install the required dependencies.
 pip install -r requirements.txt
 ```
 
-Bootstrap CDK. (This step is only required if you have not used CDK before in this account and region)
+Bootstrap CDK. This will set-up the resources required by CDK to deploy into this AWS account. (This step is only required if you have not used CDK before in this account and region)
 
 ```shell
 cdk bootstrap
@@ -67,7 +71,9 @@ Deploy all stacks and disable prompting. The entire deployment time will take 10
 cdk deploy --all --require-approval never
 ```
 
-Note: There are costs associated with provisioning resources in AWS. You can change the size of the Redshift cluster.
+Note: There are costs associated with provisioning resources in AWS. You can change the size of the Redshift cluster by updating the contents of app.py.
+
+![image-20220601154014056](./images/image-20220601154014056.png)
 
 #### Post-deployment Redshift configuration
 
@@ -77,27 +83,27 @@ Go to the Redshift console
 
 https://us-east-1.console.aws.amazon.com/redshiftv2/home?region=us-east-1#dashboard
 
-Select the cluster that we provisioned, redshiftstreamingcluster-xxxxxxxxx
+Select the cluster that we provisioned, **redshiftstreamingcluster-xxxxxxxxx**
 
 ![image-20220530163446112](./images/image-20220530163446112.png)
 
 
 
-Go to the Properties tab:
+Go to the **Properties** tab:
 
 ![image-20220530163556753](./images/image-20220530163556753.png)
 
 
 
-Scroll down to Cluster permissions. Select the IAM role that we provisioned and make this the default IAM role through the drop down menu.
+Scroll down to Cluster permissions. Select the IAM role that we provisioned and **make this the default IAM** role through the drop down menu.
 
 ![image-20220530163644113](./images/image-20220530163644113.png)
 
-Scroll down to Tags and click on Add tags.
+Scroll down to Tags and click on **Add tags**.
 
 <img src="./images/image-20220601121023062.png" alt="image-20220601121023062" style="zoom:40%;" />
 
-Specify GrafanaDataSource as a Key and click Save changes. This tag is used by the IAM integration between Amazon Redshift and Amazon Managed Grafana.
+Specify **GrafanaDataSource** as a Key and click **Save changes**. This tag is used by the IAM integration between Amazon Redshift and Amazon Managed Grafana.
 
 <img src="./images/image-20220601121120524.png" alt="image-20220601121120524" style="zoom:40%;" />
 
@@ -117,7 +123,7 @@ source .venv/bin/activate
 
 Continue from where you left off.
 
-(Optional step)
+**(Optional step)**
 
 You can also check the status of deployment in Cloudformation.
 
@@ -135,17 +141,17 @@ Login to the Redshift Query Editor v1
 
 https://us-east-1.console.aws.amazon.com/redshiftv2/home?region=us-east-1#query-editor:
 
-Click on Connect to database
+Click on **Connect to database**
 
 ![image-20220530154203415](./images/image-20220530154203415.png)
 
 
 
-Specify temporary credentials to login to Redshift
+Specify **Temporary credentials** to login to Redshift. Select the cluster we provisioned and specify the following:
 
-​	Database name: streaming_db
+​	Database name: **streaming_db**
 
-​	Database user: admin
+​	Database user: **admin**
 
 <img src="./images/image-20220530154823734.png" alt="image-20220530154823734" style="zoom: 40%;" />
 
@@ -275,9 +281,9 @@ https://us-east-1.console.aws.amazon.com/sqlworkbench/home
 
 Specify cluster credentials. Select **Temporary credentials** as the authentication mechanism.
 
-Database: streaming_db
+Database: **streaming_db**
 
-User name: admin
+User name: **admin**
 
 Click **Create connection**
 
@@ -405,7 +411,9 @@ GRANT SELECT ON ALL TABLES IN SCHEMA PUBLIC TO redshift_data_api_user;
 
 
 
-FYI - No Action Required: Refreshing the Materialized views using Step Functions
+**(Optional Step) No Action Required**
+
+Refreshing the Materialized views using Step Functions
 
 As part of the CDK deployment, we also provisioned a Step Function that will regularly refresh the materialized views on a 10-20 second interval. You can opt to inspect this Step Function by looking at the Step Function console. 
 
@@ -433,19 +441,19 @@ Go to the Amazon Managed Grafana console:
 
 https://us-east-1.console.aws.amazon.com/grafana/home?region=us-east-1
 
-Click on Create workspace
+Click on **Create workspace**.
 
 ![image-20220530180941106](./images/image-20220530180941106.png)
 
-Specify a workspace name: redshift_streaming_workspace
+Specify a workspace name: **redshift_streaming_workspace**
 
 <img src="./images/image-20220601103241863.png" alt="image-20220601103241863" style="zoom:50%;" />
 
-Select AWS Single Sign-On as the authentication method and click on Create user.
+Select **AWS Single Sign-On** as the authentication method and click on **Create user**.
 
 <img src="./images/image-20220601103404934.png" alt="image-20220601103404934" style="zoom:50%;" />
 
-Specify user details and click Create user
+Specify user details and click **Create user**
 
 <img src="./images/image-20220601103538765.png" alt="image-20220601103538765" style="zoom: 50%;" />
 
@@ -459,27 +467,27 @@ Accepting the invitation will prompt for the user to specify a password.
 
 
 
-Click Next
+Click **Next**
 
 <img src="./images/image-20220601104211596.png" alt="image-20220601104211596" style="zoom:50%;" />
 
 
 
-On Service managed permission settings, select Amazon Redshift as a datasource and select Amazon SNS as a notification channel.
+On Service managed permission settings, select **Amazon Redshift** as a datasource and select **Amazon SNS** as a notification channel.
 
 <img src="./images/image-20220601104510191.png" alt="image-20220601104510191" style="zoom:50%;" />
 
-Review workspace creation settings and click on Create workspace.
+Review workspace creation settings and click on **Create workspace**.
 
-Once the workspace is created, we will need to assign the SSO user to have access to the Grafana workspace. Click on Assign new user or group.
+Once the workspace is created, we will need to assign the SSO user to have access to the Grafana workspace. Click on **Assign new user or group**.
 
 ![image-20220601105429528](./images/image-20220601105429528.png)
 
-Select the user we created and click Assign users and groups.
+Select the user we created and click **Assign users and groups**.
 
 ![image-20220601105541755](./images/image-20220601105541755.png)
 
-Elevate the privileges of the user from viewer to admin and go back to the workspace screen.
+Elevate the privileges of the user from viewer to **admin** and go back to the workspace screen.
 
 ![image-20220601105708129](./images/image-20220601105708129.png)
 
@@ -491,44 +499,74 @@ Click on the Grafana workspace URL link.
 
 Click on **Sign in with AWS SSO**
 
-Enter username
+Enter **username**
 
-Enter password
+Enter **password**
 
 <img src="./images/image-20220601110210714.png" alt="image-20220601110210714" style="zoom:40%;" />
 
 You should now be logged in to the Amazon Managed Grafana dashboard.
 
-Click on the AWS side tab and select Data sources.
+Click on the **AWS** side tab and select **Data sources**.
 
 ![image-20220601111620412](./images/image-20220601111620412.png)
 
-Select the Redshift service. Select US East (N. Virginia) region. Select the cluster we provisioned as part of this workshop and click on Add 1 data source.
+Select the **Redshift** service. Select **US East (N. Virginia)** region. Select the cluster we provisioned as part of this workshop and click on **Add 1 data source**.
 
 ![image-20220601111747182](./images/image-20220601111747182.png)
 
-Click on Go to settings
+Click **Go to settings**
 
 ![image-20220601111913721](./images/image-20220601111913721.png)
 
-Rename datasource to Redshift Streaming
+Rename datasource to **Redshift Streaming**
 
-Set Database User to redshift_data_api_user. Click on Save & test.
+Set Database User to **redshift_data_api_user**. Click on **Save & test**.
 
 <img src="./images/image-20220601121543957.png" alt="image-20220601121543957" style="zoom:50%;" />
 
-Now let us import the pre-built dashboard. Click on the + side menu and click Import.
+Now let us import the pre-built dashboard. Click on the **+** side menu and click **Import**.
 
 <img src="./images/image-20220601121846321.png" alt="image-20220601121846321" style="zoom:50%;" />
 
-Copy and paste the contents of the dashboard.json file into the Import via panel json textbox. Click Load.
+Copy and paste the contents of the [dashboard.json](https://raw.githubusercontent.com/aws-samples/amazon-redshift-streaming-workshop/main/dashboard.json) file into the Import via panel json textbox. Click Load.
 
 <img src="./images/image-20220601123118745.png" alt="image-20220601123118745" style="zoom:50%;" />
 
-Click Import.
+Click **Import**.
 
 <img src="./images/image-20220601123243439.png" alt="image-20220601123243439" style="zoom:50%;" />
 
 Now we have the Logistics Dashboard on Amazon Managed Grafana. This dashboard refreshes every 5 seconds and runs a query against the materialized views that we previously created in Amazon Redshift.
 
 ![image-20220601123345968](./images/image-20220601123345968.png)
+
+
+
+### Clean up
+
+This is to delete all resources created as part of this workshop.
+
+Go back to AWS CloudShell
+
+https://us-east-1.console.aws.amazon.com/cloudshell/home?region=us-east-1
+
+Go to working directory
+
+```
+cd amazon-redshift-streaming-workshop
+```
+
+Activate python virtual environment
+
+```
+source .venv/bin/activate
+```
+
+Destroy resources
+
+```
+cdk destroy --all
+```
+
+![image-20220601162314757](./images/image-20220601162314757.png)
