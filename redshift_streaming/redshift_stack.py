@@ -59,7 +59,6 @@ class RedshiftStack(Stack):
             self,
             "redshiftSpectrumPolicy",
             description="Provide access between Redshift Spectrum and Lake Formation",
-            managed_policy_name="RedshiftSpectrumPolicy",
             statements=[
                 _iam.PolicyStatement(
                     effect=_iam.Effect.ALLOW,
@@ -115,7 +114,7 @@ class RedshiftStack(Stack):
             number_of_nodes=redshift_config['number_of_nodes'],
             db_name=redshift_config['db_name'],
             master_username=redshift_config['master_username'],
-            master_user_password=rs_cluster_secret.secret_value.unsafe_unwrap(),
+            master_user_password=rs_cluster_secret.secret_value.to_string(),
             iam_roles=[rs_cluster_role.role_arn],
             node_type=redshift_config['node_type'],
             cluster_subnet_group_name=rs_cluster_subnet_group.ref,

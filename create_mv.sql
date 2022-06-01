@@ -9,7 +9,7 @@ FROM kinesis_schema.customer_stream
 WHERE is_utf8(Data) AND is_valid_json(from_varbyte(Data, 'utf-8'));
 
 
-CREATE MATERIALIZED VIEW consignment_stream AS
+CREATE MATERIALIZED VIEW order_stream AS
 SELECT ApproximateArrivalTimestamp,
 CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'consignmentid', true) AS BIGINT) as consignmentid,
 CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'timestamp', true) AS VARCHAR(50)) as order_timestamp,
@@ -23,5 +23,5 @@ CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'delivery_distance', tr
 CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'userid', true) AS INT) as userid,
 CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'revenue', true) AS FLOAT) as revenue,
 CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'cost', true) AS FLOAT) as cost
-FROM kinesis_schema.consignment_stream
+FROM kinesis_schema.order_stream
 WHERE is_utf8(Data) AND is_valid_json(from_varbyte(Data, 'utf-8'));
