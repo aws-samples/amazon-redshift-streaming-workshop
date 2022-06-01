@@ -59,7 +59,7 @@ Bootstrap CDK. (This step is only required if you have not used CDK before in th
 cdk bootstrap
 ```
 
-![image-20220601093700045](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220601093700045.png)
+![image-20220601093700045](./images/image-20220601093700045.png)
 
 Deploy all stacks and disable prompting. The entire deployment time will take 10-15 minutes.
 
@@ -79,19 +79,19 @@ https://us-east-1.console.aws.amazon.com/redshiftv2/home?region=us-east-1#dashbo
 
 Select the cluster that we provisioned, redshiftstreamingcluster-xxxxxxxxx
 
-![image-20220530163446112](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530163446112.png)
+![image-20220530163446112](./images/image-20220530163446112.png)
 
 
 
 Go to the Properties tab:
 
-![image-20220530163556753](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530163556753.png)
+![image-20220530163556753](./images/image-20220530163556753.png)
 
 
 
 Scroll down to Cluster permissions. Select the IAM role that we provisioned and make this the default IAM role through the drop down menu.
 
-![image-20220530163644113](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530163644113.png)
+![image-20220530163644113](./images/image-20220530163644113.png)
 
 Scroll down to Tags and click on Add tags.
 
@@ -123,7 +123,7 @@ You can also check the status of deployment in Cloudformation.
 
 https://us-east-1.console.aws.amazon.com/cloudformation/home
 
-![image-20220530153120427](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530153120427.png)
+![image-20220530153120427](./images/image-20220530153120427.png)
 
 
 
@@ -137,7 +137,7 @@ https://us-east-1.console.aws.amazon.com/redshiftv2/home?region=us-east-1#query-
 
 Click on Connect to database
 
-![image-20220530154203415](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530154203415.png)
+![image-20220530154203415](./images/image-20220530154203415.png)
 
 
 
@@ -147,7 +147,7 @@ Specify temporary credentials to login to Redshift
 
 ​	Database user: admin
 
-<img src="./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530154823734.png" alt="image-20220530154823734" style="zoom: 45%;" />
+<img src="./images/image-20220530154823734.png" alt="image-20220530154823734" style="zoom: 40%;" />
 
 Create an external schema to establish connection between the Redshift cluster and the Kinesis data stream. 
 
@@ -157,7 +157,7 @@ FROM KINESIS
 IAM_ROLE default;
 ```
 
-![image-20220530163824705](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530163824705.png)
+<img src="./images/image-20220530163824705.png" alt="image-20220530163824705" style="zoom:50%;" />
 
 
 
@@ -173,7 +173,7 @@ WHERE is_utf8(Data) AND is_valid_json(from_varbyte(Data, 'utf-8'));
 
 Note: highlight the block of SQL code that you need to run in the Query Editor.
 
-![image-20220530164733316](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530164733316.png)
+<img src="./images/image-20220530164733316.png" alt="image-20220530164733316" style="zoom:50%;" />
 
 
 
@@ -189,7 +189,7 @@ We can now query the data in the customer_stream using standard select statement
 SELECT * FROM customer_stream;
 ```
 
-![image-20220530171443572](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530171443572.png)
+<img src="./images/image-20220530171443572.png" alt="image-20220530171443572" style="zoom: 50%;" />
 
 If we like to know the distribution of our customers across different states, we can easily unpack the contents of the JSON payload using the [PartiQL](https://partiql.org/) syntax.
 
@@ -199,7 +199,7 @@ FROM customer_stream
 GROUP BY customer_data.STATE;
 ```
 
-![image-20220530172355982](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530172355982.png)
+<img src="./images/image-20220530172355982.png" alt="image-20220530172355982" style="zoom:50%;" />
 
 Now let us ingest data from the order_stream. Let us create a materialized view that unpacks the data within the order stream.
 
@@ -241,7 +241,7 @@ SELECT current_timestamp, current_timestamp-ApproximateArrivalTimestamp as time_
 order by ApproximateArrivalTimestamp desc limit 10;
 ```
 
-![image-20220530175230331](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530175230331.png)
+<img src="./images/image-20220530175230331.png" alt="image-20220530175230331" style="zoom:50%;" />
 
 We can also join the data between the two streams and do more in depth analysis on our customer and order data. For example, we like to know what is the busiest consignment route on the state level.
 
@@ -253,7 +253,7 @@ GROUP BY os.delivery_state, cs.customer_data.state::VARCHAR
 ORDER BY count(1) desc
 ```
 
-![image-20220530180223033](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530180223033.png)
+![image-20220530180223033](./images/image-20220530180223033.png)
 
 FYI - No Action Required: Refreshing the Materialized views using Step Functions
 
@@ -261,7 +261,7 @@ As part of the CDK deployment, we also provisioned a Step Function that will reg
 
 https://console.aws.amazon.com/states/home?region=us-east-1
 
-![image-20220530180606214](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530180606214.png)
+![image-20220530180606214](./images/image-20220530180606214.png)
 
 ### Connecting to the Redshift Cluster 
 
@@ -411,7 +411,7 @@ As part of the CDK deployment, we also provisioned a Step Function that will reg
 
 https://console.aws.amazon.com/states/home?region=us-east-1
 
-![image-20220530180606214](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530180606214.png)
+![image-20220530180606214](./images/image-20220530180606214.png)
 
 
 
@@ -435,7 +435,7 @@ https://us-east-1.console.aws.amazon.com/grafana/home?region=us-east-1
 
 Click on Create workspace
 
-![image-20220530180941106](./images/:Users:pvillena:Library:Application Support:typora-user-images:image-20220530180941106.png)
+![image-20220530180941106](./images/image-20220530180941106.png)
 
 Specify a workspace name: redshift_streaming_workspace
 
