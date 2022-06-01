@@ -117,6 +117,7 @@ class RedshiftStack(Stack):
             master_user_password=rs_cluster_secret.secret_value.to_string(),
             iam_roles=[rs_cluster_role.role_arn],
             node_type=redshift_config['node_type'],
+            publicly_accessible=False,
             cluster_subnet_group_name=rs_cluster_subnet_group.ref,
             vpc_security_group_ids=[
                 rs_security_group.security_group_id]

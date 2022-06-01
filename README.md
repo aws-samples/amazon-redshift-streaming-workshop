@@ -3,13 +3,13 @@
 
 Most organisations today agree that data is one of their most important asset and that the ability to act on timely data, sets data-driven organisations apart from their peers. However getting access to real-time data used to require significant investment in terms of acquiring new software or in hiring specialised engineering teams. The new Amazon Redshift streaming ingestion feature aims to democratise streaming analytics with its low-cost and with SQL as the only skill necessary to set it up.
 
-In this workshop, we will show how easy it is to build a streaming analytics application using this new feature. We will demo a near-real time logistics dashboard built using Amazon Managed Grafana to provide augmented intelligence and situational awareness for the logistics operations team. It connects to a Redshift cluster that uses this new streaming feature to load data from a Kinesis data stream. We will also provide instructions on how to replicate this demo in your own AWS account.
+In this workshop, we will show how easy it is to build a streaming analytics application using this new feature. We will create a near-real time logistics dashboard using Amazon Managed Grafana to provide augmented intelligence and situational awareness for the logistics operations team. It connects to a Redshift cluster that uses this new streaming feature to load data from a Kinesis data stream. 
 
 ### Infrastructure Provisioning using CDK and Cloudshell
 
 The AWS Cloud Development Kit (AWS CDK) is an open-source project that allows you to define your cloud infrastructure using your familiar programming languages. In the case of this workshop, we are using python to define the cloud infrastructure as it is one of the more commonly used languages used by analytics professionals.
 
-Note: This workshop will work for any AWS region where AWS Cloudshell is available. However this workshop's instructions will be using us-east-1 and the links provided will work for this specific region. (This can also be deployed in regions without Cloudshell but will require additional steps to provision an EC2 Linux deployment instance.) 
+Note: This workshop will work for any AWS region where AWS Cloudshell is available. However the workshop's instructions will be using us-east-1 and the links provided will work for this region. (This can also be deployed in regions without Cloudshell but will require additional steps to provision an EC2 Linux deployment instance.) 
 
 Note: In order for you to run this code you will need elevated privileges into the AWS account you are using.
 
