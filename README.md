@@ -1,9 +1,9 @@
 
 # Amazon Redshift Streaming Workshop
 
-Most organisations today agree that data is one of their most important asset and that the ability to act on timely data, sets data-driven organisations apart from their peers. However getting access to real-time data used to require significant investment in terms of acquiring new software or in hiring specialised engineering teams. The new Amazon Redshift streaming ingestion feature aims to democratise streaming analytics with its low-cost and with SQL as the only skill necessary to set it up.
+Most organisations today agree that data is one of their most important asset and that the ability to act on timely data, sets data-driven organisations apart from their peers. However getting access to real-time data used to require significant investment in terms of acquiring new software or in hiring specialised engineering teams. The new Amazon Redshift streaming ingestion feature aims to democratise streaming analytics with its low-cost and minimal technical skill requirements as it is primarily defined using SQL.
 
-In this workshop, we will show how easy it is to build a streaming analytics application using this new feature. We will create a near-real time logistics dashboard using Amazon Managed Grafana to provide augmented intelligence and situational awareness for the logistics operations team. It connects to a Redshift cluster that uses this new streaming feature to load data from a Kinesis data stream. 
+In this workshop, we will show how easy it is to build a streaming analytics application using this new feature. We will create a near-real time logistics dashboard using Amazon Managed Grafana to provide augmented intelligence and situational awareness for the logistics operations team. It connects to a Redshift cluster which uses Redshift streaming to analyse data from a Kinesis data stream. 
 
 ![image-20220601123345968](./images/image-20220601123345968.png)
 
@@ -11,7 +11,7 @@ In this workshop, we will show how easy it is to build a streaming analytics app
 
 ### Infrastructure Provisioning using CDK and Cloudshell
 
-The AWS Cloud Development Kit (AWS CDK) is an open-source project that allows you to define your cloud infrastructure using your familiar programming languages. In the case of this workshop, we are using python to define the cloud infrastructure as it is one of the more commonly used languages used by analytics professionals.
+The AWS Cloud Development Kit (AWS CDK) is an open-source project that allows you to define your cloud infrastructure using familiar programming languages. In this workshop, we are using python to define the cloud infrastructure as it is one of the most commonly used programming languages used by analytics professionals.
 
 Note: This workshop will work for any AWS region where AWS Cloudshell is available. However the workshop's instructions will be using the us-east-1 region (This can also be deployed in regions without Cloudshell but will require additional steps to provision an EC2 Linux deployment instance.) 
 
@@ -71,13 +71,13 @@ Deploy all stacks and disable prompting. The entire deployment time will take 10
 cdk deploy --all --require-approval never
 ```
 
-Note: There are costs associated with provisioning resources in AWS. You can change the size of the Redshift cluster by updating the contents of app.py.
+Note: There are costs associated with provisioning resources in AWS. You can change the size of the Redshift cluster by updating the contents of app.py in the project working directory.
 
 ![image-20220601154014056](./images/image-20220601154014056.png)
 
 #### Post-deployment Redshift configuration
 
-At the moment setting up a default IAM role could not be configured automatically using CloudFormation. The following are the steps to define a default IAM role.
+At the moment setting up a default IAM role for the Redshift cluster could not be configured automatically using CloudFormation. The following are the steps to define a default IAM role.
 
 Go to the Redshift console
 
@@ -95,15 +95,17 @@ Go to the **Properties** tab:
 
 
 
-Scroll down to Cluster permissions. Select the IAM role that we provisioned and **make this the default IAM** role through the drop down menu.
+Scroll down to **Cluster permissions**. Select the IAM role that we provisioned and **make this the default IAM** role through the drop down menu.
 
 ![image-20220530163644113](./images/image-20220530163644113.png)
 
-Scroll down to Tags and click on **Add tags**.
+We also need to add a tag that is used by the IAM integration between Amazon Redshift and Amazon Managed Grafana.
+
+Scroll down to **Tags** and click on **Add tags**.
 
 <img src="./images/image-20220601121023062.png" alt="image-20220601121023062" style="zoom:40%;" />
 
-Specify **GrafanaDataSource** as a Key and click **Save changes**. This tag is used by the IAM integration between Amazon Redshift and Amazon Managed Grafana.
+Specify **GrafanaDataSource** as a Key and click **Save changes**. 
 
 <img src="./images/image-20220601121120524.png" alt="image-20220601121120524" style="zoom:40%;" />
 
@@ -132,142 +134,6 @@ https://us-east-1.console.aws.amazon.com/cloudformation/home
 ![image-20220530153120427](./images/image-20220530153120427.png)
 
 
-
-
-
-### Create Redshift Streaming objects (Event Engine)
-
-Login to the Redshift Query Editor v1
-
-https://us-east-1.console.aws.amazon.com/redshiftv2/home?region=us-east-1#query-editor:
-
-Click on **Connect to database**
-
-![image-20220530154203415](./images/image-20220530154203415.png)
-
-
-
-Specify **Temporary credentials** to login to Redshift. Select the cluster we provisioned and specify the following:
-
-​	Database name: **streaming_db**
-
-​	Database user: **admin**
-
-<img src="./images/image-20220530154823734.png" alt="image-20220530154823734" style="zoom: 40%;" />
-
-Create an external schema to establish connection between the Redshift cluster and the Kinesis data stream. 
-
-```sql
-CREATE EXTERNAL SCHEMA kinesis_schema
-FROM KINESIS
-IAM_ROLE default;
-```
-
-<img src="./images/image-20220530163824705.png" alt="image-20220530163824705" style="zoom:50%;" />
-
-
-
-Create a materialized view to parse data in the kinesis data stream, customer_stream. In this case, the whole payload is ingested as is and stored using the super data type in Redshift.
-
-```sql
-CREATE MATERIALIZED VIEW customer_stream AS
-SELECT ApproximateArrivalTimestamp,
-JSON_PARSE(from_varbyte(Data, 'utf-8')) as customer_data
-FROM kinesis_schema.customer_stream
-WHERE is_utf8(Data) AND is_valid_json(from_varbyte(Data, 'utf-8'));
-```
-
-Note: highlight the block of SQL code that you need to run in the Query Editor.
-
-<img src="./images/image-20220530164733316.png" alt="image-20220530164733316" style="zoom:50%;" />
-
-
-
-Refresh the materialized views. This is where the actual data ingestion happens. Data gets loaded from the kinesis data stream into Amazon S3 without having to stage it first in S3.
-
-```sql
-REFRESH MATERIALIZED VIEW customer_stream;
-```
-
-We can now query the data in the customer_stream using standard select statement.
-
-```
-SELECT * FROM customer_stream;
-```
-
-<img src="./images/image-20220530171443572.png" alt="image-20220530171443572" style="zoom: 50%;" />
-
-If we like to know the distribution of our customers across different states, we can easily unpack the contents of the JSON payload using the [PartiQL](https://partiql.org/) syntax.
-
-```sql
-SELECT count(1), customer_data.STATE::VARCHAR
-FROM customer_stream
-GROUP BY customer_data.STATE;
-```
-
-<img src="./images/image-20220530172355982.png" alt="image-20220530172355982" style="zoom:50%;" />
-
-Now let us ingest data from the order_stream. Let us create a materialized view that unpacks the data within the order stream.
-
-```sql
-CREATE MATERIALIZED VIEW order_stream AS
-SELECT ApproximateArrivalTimestamp,
-CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'consignmentid', true) AS BIGINT) as consignmentid,
-CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'timestamp', true) AS VARCHAR(50)) as order_timestamp,
-CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'delivery_address', true) AS VARCHAR(100)) as delivery_address,
-CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'delivery_state', true) AS VARCHAR(50)) as delivery_state,
-CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'origin_address', true) AS VARCHAR(100)) as origin_address,
-CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'origin_state', true) AS VARCHAR(50)) as origin_state,
-CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'delay_probability', true) AS VARCHAR(10)) as delay_probability,
-CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'days_to_deliver', true) AS INT) as days_to_deliver,
-CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'delivery_distance', true) AS FLOAT) as delivery_distance,
-CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'userid', true) AS INT) as userid,
-CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'revenue', true) AS FLOAT) as revenue,
-CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'cost', true) AS FLOAT) as cost
-FROM kinesis_schema.order_stream
-WHERE is_utf8(Data) AND is_valid_json(from_varbyte(Data, 'utf-8'));
-```
-
-Let us refresh the materialized view.
-
-```sql
-REFRESH MATERIALIZED VIEW order_stream;
-```
-
-And query the data within the view
-
-```sql
-SELECT * FROM order_stream;
-```
-
-We can query the most recent transactions that have been ingested into Redshift using this query
-
-```sql
-SELECT current_timestamp, current_timestamp-ApproximateArrivalTimestamp as time_diff, * FROM order_stream
-order by ApproximateArrivalTimestamp desc limit 10;
-```
-
-<img src="./images/image-20220530175230331.png" alt="image-20220530175230331" style="zoom:50%;" />
-
-We can also join the data between the two streams and do more in depth analysis on our customer and order data. For example, we like to know what is the busiest consignment route on the state level.
-
-```sql
-SELECT os.delivery_state, cs.customer_data.state::VARCHAR as origin_state, count(1)
-FROM customer_stream cs
-INNER JOIN order_stream os ON cs.customer_data.userid::INT = os.userid
-GROUP BY os.delivery_state, cs.customer_data.state::VARCHAR
-ORDER BY count(1) desc
-```
-
-![image-20220530180223033](./images/image-20220530180223033.png)
-
-FYI - No Action Required: Refreshing the Materialized views using Step Functions
-
-As part of the CDK deployment, we also provisioned a Step Function that will regularly refresh the materialized views on a 5 second interval. You can opt to inspect this Step Function by looking at the Step Function console. 
-
-https://console.aws.amazon.com/states/home?region=us-east-1
-
-![image-20220530180606214](./images/image-20220530180606214.png)
 
 ### Connecting to the Redshift Cluster 
 
@@ -570,3 +436,145 @@ cdk destroy --all
 ```
 
 ![image-20220601162314757](./images/image-20220601162314757.png)
+
+
+
+
+
+
+
+###  (Event Engine option) Create Redshift Streaming objects
+
+Login to the Redshift Query Editor v1
+
+https://us-east-1.console.aws.amazon.com/redshiftv2/home?region=us-east-1#query-editor:
+
+Click on **Connect to database**
+
+![image-20220530154203415](./images/image-20220530154203415.png)
+
+
+
+Specify **Temporary credentials** to login to Redshift. Select the cluster we provisioned and specify the following:
+
+​	Database name: **streaming_db**
+
+​	Database user: **admin**
+
+<img src="./images/image-20220530154823734.png" alt="image-20220530154823734" style="zoom: 40%;" />
+
+Create an external schema to establish connection between the Redshift cluster and the Kinesis data stream. 
+
+```sql
+CREATE EXTERNAL SCHEMA kinesis_schema
+FROM KINESIS
+IAM_ROLE default;
+```
+
+<img src="./images/image-20220530163824705.png" alt="image-20220530163824705" style="zoom:50%;" />
+
+
+
+Create a materialized view to parse data in the kinesis data stream, customer_stream. In this case, the whole payload is ingested as is and stored using the super data type in Redshift.
+
+```sql
+CREATE MATERIALIZED VIEW customer_stream AS
+SELECT ApproximateArrivalTimestamp,
+JSON_PARSE(from_varbyte(Data, 'utf-8')) as customer_data
+FROM kinesis_schema.customer_stream
+WHERE is_utf8(Data) AND is_valid_json(from_varbyte(Data, 'utf-8'));
+```
+
+Note: highlight the block of SQL code that you need to run in the Query Editor.
+
+<img src="./images/image-20220530164733316.png" alt="image-20220530164733316" style="zoom:50%;" />
+
+
+
+Refresh the materialized views. This is where the actual data ingestion happens. Data gets loaded from the kinesis data stream into Amazon S3 without having to stage it first in S3.
+
+```sql
+REFRESH MATERIALIZED VIEW customer_stream;
+```
+
+We can now query the data in the customer_stream using standard select statement.
+
+```
+SELECT * FROM customer_stream;
+```
+
+<img src="./images/image-20220530171443572.png" alt="image-20220530171443572" style="zoom: 50%;" />
+
+If we like to know the distribution of our customers across different states, we can easily unpack the contents of the JSON payload using the [PartiQL](https://partiql.org/) syntax.
+
+```sql
+SELECT count(1), customer_data.STATE::VARCHAR
+FROM customer_stream
+GROUP BY customer_data.STATE;
+```
+
+<img src="./images/image-20220530172355982.png" alt="image-20220530172355982" style="zoom:50%;" />
+
+Now let us ingest data from the order_stream. Let us create a materialized view that unpacks the data within the order stream.
+
+```sql
+CREATE MATERIALIZED VIEW order_stream AS
+SELECT ApproximateArrivalTimestamp,
+CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'consignmentid', true) AS BIGINT) as consignmentid,
+CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'timestamp', true) AS VARCHAR(50)) as order_timestamp,
+CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'delivery_address', true) AS VARCHAR(100)) as delivery_address,
+CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'delivery_state', true) AS VARCHAR(50)) as delivery_state,
+CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'origin_address', true) AS VARCHAR(100)) as origin_address,
+CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'origin_state', true) AS VARCHAR(50)) as origin_state,
+CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'delay_probability', true) AS VARCHAR(10)) as delay_probability,
+CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'days_to_deliver', true) AS INT) as days_to_deliver,
+CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'delivery_distance', true) AS FLOAT) as delivery_distance,
+CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'userid', true) AS INT) as userid,
+CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'revenue', true) AS FLOAT) as revenue,
+CAST(JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'cost', true) AS FLOAT) as cost
+FROM kinesis_schema.order_stream
+WHERE is_utf8(Data) AND is_valid_json(from_varbyte(Data, 'utf-8'));
+```
+
+Let us refresh the materialized view.
+
+```sql
+REFRESH MATERIALIZED VIEW order_stream;
+```
+
+And query the data within the view
+
+```sql
+SELECT * FROM order_stream;
+```
+
+We can query the most recent transactions that have been ingested into Redshift using this query
+
+```sql
+SELECT current_timestamp, current_timestamp-ApproximateArrivalTimestamp as time_diff, * FROM order_stream
+order by ApproximateArrivalTimestamp desc limit 10;
+```
+
+<img src="./images/image-20220530175230331.png" alt="image-20220530175230331" style="zoom:50%;" />
+
+We can also join the data between the two streams and do more in depth analysis on our customer and order data. For example, we like to know what is the busiest consignment route on the state level.
+
+```sql
+SELECT os.delivery_state, cs.customer_data.state::VARCHAR as origin_state, count(1)
+FROM customer_stream cs
+INNER JOIN order_stream os ON cs.customer_data.userid::INT = os.userid
+GROUP BY os.delivery_state, cs.customer_data.state::VARCHAR
+ORDER BY count(1) desc
+```
+
+![image-20220530180223033](./images/image-20220530180223033.png)
+
+FYI - No Action Required: Refreshing the Materialized views using Step Functions
+
+As part of the CDK deployment, we also provisioned a Step Function that will regularly refresh the materialized views on a 5 second interval. You can opt to inspect this Step Function by looking at the Step Function console. 
+
+https://console.aws.amazon.com/states/home?region=us-east-1
+
+![image-20220530180606214](./images/image-20220530180606214.png)
+
+### 
