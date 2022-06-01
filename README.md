@@ -357,7 +357,7 @@ Elevate the privileges of the user from viewer to **admin** and go back to the w
 
 ![image-20220601105708129](./images/image-20220601105708129.png)
 
-Click on the Grafana workspace URL link.
+Click on the **Grafana workspace URL link**.
 
 ![image-20220601105850286](./images/image-20220601105850286.png)
 
