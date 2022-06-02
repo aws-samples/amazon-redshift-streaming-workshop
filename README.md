@@ -240,7 +240,7 @@ And query the data within the view
 SELECT * FROM order_stream;
 ```
 
-We can query the most recent transactions that have been ingested into Redshift using this query
+We can query the most recent transactions that have been ingested into Redshift using this select statement
 
 ```sql
 SELECT current_timestamp, current_timestamp-ApproximateArrivalTimestamp as time_diff, * FROM order_stream

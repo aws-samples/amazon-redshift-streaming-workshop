@@ -69,7 +69,7 @@ def lambda_handler(event, context):
             
         try:
             record_count = 0
-            for i in range(random.randint(1,100)):
+            for i in range(random.randint(90,110)):
                 now = datetime.now()
                 prob = 0
                 if now.hour < 12:
@@ -106,7 +106,7 @@ def lambda_handler(event, context):
                 send_data(client_kinesis, profile_rec,
                             str(uuid.uuid4()), stream_name)
                 record_count += 1
-                #time.sleep(1)
+                time.sleep(0.5)
             resp["resp"] = record_count
             resp["status"] = True
             table.put_item(Item={'id':2, 'info':{'latest':int(order_key + record_count)}})

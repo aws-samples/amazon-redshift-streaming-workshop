@@ -94,7 +94,7 @@ class IngestionStack(Stack):
                 "LOG_LEVEL": "INFO",
                 "STREAM_NAME": f"{self.order_stream.stream_name}"
             },
-            timeout=Duration.seconds(5),
+            timeout=Duration.seconds(60),
             reserved_concurrent_executions=1,
         )
 
