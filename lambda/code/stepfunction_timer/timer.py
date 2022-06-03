@@ -14,9 +14,9 @@ def lambda_handler(event, context):
         # Calculate difference between start of Step Function and now in seconds
         timediff = (now-dt).total_seconds()
         
-        # Check if DesiredRuntimeSec is present in event. If not present, assume desired runtime of 50sec
-        if 'DesiredRuntimeSec' in event:
-            desiredRuntimeSec = event["DesiredRuntimeSec"]
+        # Check if desiredRuntimeSec is present in event. If not present, assume desired runtime of 50sec
+        if 'desiredRuntimeSec' in event:
+            desiredRuntimeSec = event["desiredRuntimeSec"]
         else:
             desiredRuntimeSec = 50
         
