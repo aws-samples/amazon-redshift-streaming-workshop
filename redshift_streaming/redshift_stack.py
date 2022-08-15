@@ -114,7 +114,7 @@ class RedshiftStack(Stack):
             number_of_nodes=redshift_config['number_of_nodes'],
             db_name=redshift_config['db_name'],
             master_username=redshift_config['master_username'],
-            master_user_password=rs_cluster_secret.secret_value.to_string(),
+            master_user_password=rs_cluster_secret.secret_value.unsafe_unwrap(),
             iam_roles=[rs_cluster_role.role_arn],
             node_type=redshift_config['node_type'],
             publicly_accessible=False,
