@@ -25,6 +25,12 @@ Open Cloudshell
 
 https://us-east-1.console.aws.amazon.com/cloudshell/home?region=us-east-1
 
+Upgrade CDK to the latest version
+
+```
+sudo npm install -g aws-cdk@latest
+```
+
 Clone this git repository
 
 ```
