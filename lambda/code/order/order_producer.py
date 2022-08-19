@@ -37,23 +37,6 @@ def lambda_handler(event, context):
         table = client_dynamodb.Table(table_name)
         client_kinesis = boto3.client('kinesis', region)
         fake = Faker(['en-AU'])
-
-        
-        curkey = table.get_item(Key={'id':1})
-
-        if "Item" in curkey:
-            cur_key = int(curkey['Item']['info']['latest'])
-        else:
-            table.put_item(Item={'id':1, 'info':{'latest':0}})
-            cur_key = 0
-        
-        if cur_key == 0:
-            return {
-                "statusCode": 200,
-                "body": json.dumps({
-                    "message": resp
-                })
-            }
         
         orderkey = table.get_item(Key={'id':2})
 
@@ -71,13 +54,7 @@ def lambda_handler(event, context):
             record_count = 0
             for i in range(random.randint(90,110)):
                 now = datetime.now()
-                prob = 0
-                if now.hour < 12:
-                    prob = now.hour
-                elif now.hour == 12:
-                    prob = now.hour + now.minute
-                elif now.hour > 12:
-                    prob = now.hour + 60
+                prob = now.hour + now.minute
                 prob = prob/100
                 product_id = random.randint(1, len(product_dict))
                 profile_rec = {}
@@ -85,12 +62,12 @@ def lambda_handler(event, context):
                 customer_address = fake.address()
                 customer_state = customer_address.split(',')[-2]
                 order_address = fake.address()
-                order_state = customer_address.split(',')[-2]
+                order_state = order_address.split(',')[-2]
                 profile_rec['delivery_address'] = customer_address
                 profile_rec['delivery_state'] = customer_state
                 profile_rec['origin_address'] = order_address
                 profile_rec['origin_state'] = order_state
-                profile_rec['userid'] = random.randint(0, cur_key)
+                profile_rec['userid'] = random.randint(0, 15521)
                 profile_rec['timestamp'] = datetime.now().isoformat()
                 days_to_deliver = random.choice(range(2,7))
                 profile_rec['days_to_deliver'] = days_to_deliver

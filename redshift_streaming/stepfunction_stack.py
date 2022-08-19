@@ -39,8 +39,7 @@ class StepFunctionStack(Stack):
 
         rs_cluster = redshift_stack.get_rs_cluster
 
-        sql = '''REFRESH MATERIALIZED VIEW customer_stream;
-            REFRESH MATERIALIZED VIEW order_stream;'''
+        sql = '''REFRESH MATERIALIZED VIEW order_stream;'''
 
         sfn_execute_statement = _sfn_tasks.CallAwsService(
             self, 'Submit',

@@ -7,6 +7,7 @@ from aws_cdk import (
     aws_iam as _iam,
     aws_redshift as _redshift,
     aws_secretsmanager as _sm,
+    aws_redshiftserverless as _rs,
 )
 
 from constructs import Construct
@@ -16,7 +17,8 @@ class RedshiftStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, ingestion_stack, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        redshift_config = self.node.try_get_context('redshift_config')
+        environment = self.node.try_get_context('environment')
+        redshift_config = self.node.try_get_context(f'{environment}_redshift_config')
 
         vpc = _ec2.Vpc(
             self,
@@ -31,124 +33,37 @@ class RedshiftStack(Stack):
             vpc=vpc
         )
 
-        rs_cluster_role = _iam.Role(
+        rs_role = _iam.Role(
             self, "redshiftClusterRole",
             assumed_by=_iam.ServicePrincipal(
                 "redshift.amazonaws.com"),
             managed_policies=[
-                _iam.ManagedPolicy.from_aws_managed_policy_name(
-                    "AmazonS3FullAccess"
-                ),
                 _iam.ManagedPolicy.from_aws_managed_policy_name(
                     "AmazonRedshiftAllCommandsFullAccess"
                 )
             ]
         )
 
-        rs_cluster_secret = _sm.Secret(
-            self,
-            "RedshiftSecretPassword",
-            description="Redshift admin credentials",
-            secret_name="RedshiftSecret",
-            generate_secret_string=_sm.SecretStringGenerator(
-                exclude_punctuation=True),
-            removal_policy=RemovalPolicy.DESTROY
-        )
-
-        _iam.ManagedPolicy(
-            self,
-            "redshiftSpectrumPolicy",
-            description="Provide access between Redshift Spectrum and Lake Formation",
-            statements=[
-                _iam.PolicyStatement(
-                    effect=_iam.Effect.ALLOW,
-                    actions=[
-                        "glue:CreateDatabase",
-                        "glue:DeleteDatabase",
-                        "glue:GetDatabase",
-                        "glue:GetDatabases",
-                        "glue:UpdateDatabase",
-                        "glue:CreateTable",
-                        "glue:DeleteTable",
-                        "glue:BatchDeleteTable",
-                        "glue:UpdateTable",
-                        "glue:GetTable",
-                        "glue:GetTables",
-                        "glue:BatchCreatePartition",
-                        "glue:CreatePartition",
-                        "glue:DeletePartition",
-                        "glue:BatchDeletePartition",
-                        "glue:UpdatePartition",
-                        "glue:GetPartition",
-                        "glue:GetPartitions",
-                        "glue:BatchGetPartition",
-                        "lakeformation:GetDataAccess"
-                    ],
-                    resources=["*"]
-                )
-            ],
-            roles=[
-                rs_cluster_role
-            ]
-        )
-
-        customer_stream = ingestion_stack.get_customer_stream
         order_stream = ingestion_stack.get_order_stream
-
-        order_stream.grant_read_write(rs_cluster_role)
-        customer_stream.grant_read_write(rs_cluster_role)
-
-        rs_cluster_subnet_group = _redshift.CfnClusterSubnetGroup(
+        order_stream.grant_read_write(rs_role)
+        
+        self.rs_namespace = _rs.CfnNamespace(
             self,
-            "redshiftSubnetGroup",
+            "redshiftServerlessNamespace",
+            namespace_name="ns-streaming",
+            default_iam_role_arn=rs_role.role_arn,
+            iam_roles=[rs_role.role_arn]
+        )
+
+        self.rs_workgroup = _rs.CfnWorkgroup(
+            self,
+            "redshiftServerlessWorkgroup",
+            workgroup_name="wg-streaming",
+            base_capacity=32,
+            namespace_name=self.rs_namespace.ref,
+            security_group_ids=[rs_security_group.security_group_id],
             subnet_ids=vpc.select_subnets(
                 subnet_type=_ec2.SubnetType.PRIVATE_WITH_NAT
             ).subnet_ids,
-            description="Redshift Subnet Group"
         )
 
-        self.rs_cluster = _redshift.CfnCluster(
-            self,
-            "redshiftStreamingCluster",
-            cluster_type=redshift_config['cluster_type'],
-            number_of_nodes=redshift_config['number_of_nodes'],
-            db_name=redshift_config['db_name'],
-            master_username=redshift_config['master_username'],
-            master_user_password=rs_cluster_secret.secret_value.unsafe_unwrap(),
-            iam_roles=[rs_cluster_role.role_arn],
-            node_type=redshift_config['node_type'],
-            publicly_accessible=False,
-            cluster_subnet_group_name=rs_cluster_subnet_group.ref,
-            vpc_security_group_ids=[
-                rs_security_group.security_group_id]
-        )
-
-        CfnOutput(
-            self,
-            "RedshiftCluster",
-            value=f"{self.rs_cluster.attr_endpoint_address}",
-            description=f"RedshiftCluster Endpoint"
-        )
-        CfnOutput(
-            self,
-            "RedshiftClusterPassword",
-            value=(
-                f"https://console.aws.amazon.com/secretsmanager/home?region="
-                f"{Aws.REGION}"
-                f"#/secret?name="
-                f"{rs_cluster_secret.secret_arn}"
-            ),
-            description=f"Redshift Cluster Password in Secrets Manager"
-        )
-        CfnOutput(
-            self,
-            "RedshiftIAMRole",
-            value=(
-                f"{rs_cluster_role.role_arn}"
-            ),
-            description=f"Redshift Cluster IAM Role Arn"
-        )
-
-    @property
-    def get_rs_cluster(self):
-        return self.rs_cluster

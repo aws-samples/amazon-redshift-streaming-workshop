@@ -16,7 +16,7 @@ context_constants = {
         "retention_period": 72,
     },
     # Redshift Configuration
-    "dev_rs_config": {
+    "dev_redshift_config": {
         "max_azs": 3,
         "nat_gateways": 1,
         "redshift_vpc_cidr": "10.1.0.0/16",
