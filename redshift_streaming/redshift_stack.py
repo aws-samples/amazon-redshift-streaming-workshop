@@ -163,7 +163,7 @@ class RedshiftStack(Stack):
             instance_type=sagemaker_config['instance_type'],
             role_arn=sg_role.role_arn,
             lifecycle_config_name=cfn_notebook_instance_lifecycle_config.notebook_instance_lifecycle_config_name,
-            notebook_instance_name=sagemaker_config['notebook_instance_name'],
+            platform_identifier=sagemaker_config['platform_identifier'],
             security_group_ids=[sg_security_group.security_group_id],
             subnet_id=vpc.select_subnets(
                 subnet_type=_ec2.SubnetType.PRIVATE_WITH_NAT

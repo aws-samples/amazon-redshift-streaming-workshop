@@ -39,6 +39,7 @@ context_constants = {
     },
     "dev_sagemaker_config":{
         "content": base64.b64encode(startup_script.encode('utf-8')).decode("utf-8"),
+        "platform_identifier": "notebook-al2-v2",
         "lifecycle_config_name": "pip-dependencies",
         "instance_type": "ml.t3.large",
         "notebook_instance_name": "redshift-sagemaker",
