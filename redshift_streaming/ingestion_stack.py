@@ -9,10 +9,13 @@ from aws_cdk import (
     aws_kinesis as _kinesis,
     aws_logs as _logs,
     aws_events as _events,
-    aws_events_targets as _events_targets
+    aws_events_targets as _events_targets,
+    aws_s3 as _s3,
+    aws_s3_deployment as _s3_deploy,
 )
 from constructs import Construct
 
+from pathlib import Path
 
 class IngestionStack(Stack):
 
@@ -71,6 +74,32 @@ class IngestionStack(Stack):
         step_trigger.add_target(
             _events_targets.LambdaFunction(order_lambda)
         )
+
+        self.s3_bucket_raw = _s3.Bucket(
+            self,
+            "s3_raw",
+            encryption=_s3.BucketEncryption.S3_MANAGED,
+            public_read_access=False,
+            block_public_access=_s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+        )
+
+        # deploy openlineage jar to spark bucket
+        _s3_deploy.BucketDeployment(
+            self,
+            "s3_deploy_raw",
+            destination_bucket=self.s3_bucket_raw,
+            sources=[
+                _s3_deploy.Source.asset(
+                    str(Path(__file__).parent.parent.joinpath("assets/data"))
+                )
+            ],
+        )
+
+    @property
+    def get_s3_bucket_raw(self):
+        return self.s3_bucket_raw 
     
     @property
     def get_order_stream(self):

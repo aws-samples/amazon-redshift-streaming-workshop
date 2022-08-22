@@ -1,6 +1,13 @@
 import os
 import json
 import urllib.request
+import base64
+
+from pathlib import Path
+
+SH_FILE =str(Path(__file__).parent.joinpath("assets/scripts/startup.sh"))
+with open(SH_FILE, 'r') as sh_file:
+    startup_script = sh_file.read()
 
 APP_NAME = "rs-qs"
 context_constants = {
@@ -27,13 +34,13 @@ context_constants = {
         "db_name": "dev",
         "cluster_type": "multi-node",
         "number_of_nodes": 2,
-        "master_username": f"{APP_NAME}-user",
+        "master_username": "admin",
         "node_type": "ra3.4xlarge",
     },
-    "dev_jumpbox_config":{
-        "instance_type_identifier": "t3.xlarge",
-        "instance_name": "Jump Box",
-        "key_name": "poc",
-        "ebs_volume_size": 100,
+    "dev_sagemaker_config":{
+        "content": base64.b64encode(startup_script.encode('utf-8')).decode("utf-8"),
+        "lifecycle_config_name": "pip-dependencies",
+        "instance_type": "ml.t3.large",
+        "notebook_instance_name": "redshift-sagemaker",
     }
 }
