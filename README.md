@@ -19,11 +19,11 @@ Note: In order for you to run this code you will need elevated privileges into t
 
 Login to the AWS Console.
 
-https://us-east-1.console.aws.amazon.com/console/home
+https://console.aws.amazon.com/console/home
 
 Open Cloudshell
 
-https://us-east-1.console.aws.amazon.com/cloudshell/home?region=us-east-1
+https://console.aws.amazon.com/cloudshell/home
 
 Upgrade CDK to the latest version
 
@@ -34,7 +34,7 @@ sudo npm install -g aws-cdk@latest
 Clone this git repository
 
 ```
-git clone https://github.com/aws-samples/amazon-redshift-streaming-workshop
+git clone https://github.com/aws-samples/amazon-redshift-streaming-workshop --branch asean-roadshow
 ```
 
 Go to the working directory:
