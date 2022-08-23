@@ -2,8 +2,6 @@ from aws_cdk import (
     Duration,
     Stack,
     RemovalPolicy,
-    aws_ec2 as _ec2,
-    # aws_sqs as sqs,
     aws_lambda as _lambda,
     aws_dynamodb as _dynamodb,
     aws_kinesis as _kinesis,
@@ -42,9 +40,10 @@ class IngestionStack(Stack):
             removal_policy=RemovalPolicy.DESTROY
         )
 
-        lambdaLayer = _lambda.LayerVersion(self, 'lambda-layer',
-                  code = _lambda.AssetCode('lambda/layer/'),
-                  compatible_runtimes = [_lambda.Runtime.PYTHON_3_8],
+        lambda_layer = _lambda.LayerVersion(self, 
+            'lambda-layer',
+            code = _lambda.AssetCode('lambda/layer/python.zip'),
+            compatible_runtimes = [_lambda.Runtime.PYTHON_3_8],
         )
 
         order_lambda = _lambda.Function(
@@ -54,7 +53,7 @@ class IngestionStack(Stack):
             description='Lambda function deployed using AWS CDK Python',
             code=_lambda.AssetCode('./lambda/code/order'),
             handler='order_producer.lambda_handler',
-            layers = [lambdaLayer],
+            layers = [lambda_layer],
             environment={
                 "LOG_LEVEL": "INFO",
                 "STREAM_NAME": f"{self.order_stream.stream_name}"
@@ -65,6 +64,8 @@ class IngestionStack(Stack):
 
         self.order_stream.grant_read_write(order_lambda)
         dynamodb_table.grant_read_write_data(order_lambda)
+
+        
 
         step_trigger = _events.Rule(
             self, 'StepTrigger',
@@ -85,7 +86,6 @@ class IngestionStack(Stack):
             auto_delete_objects=True,
         )
 
-        # deploy openlineage jar to spark bucket
         _s3_deploy.BucketDeployment(
             self,
             "s3_deploy_raw",

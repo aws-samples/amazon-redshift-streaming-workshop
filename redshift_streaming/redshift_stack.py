@@ -1,4 +1,4 @@
-import base64
+import json
 from aws_cdk import (
     Stack,
     CfnOutput,
@@ -10,6 +10,10 @@ from aws_cdk import (
     aws_secretsmanager as _sm,
     aws_redshiftserverless as _rs,
     aws_sagemaker as _sg,
+    aws_lambda as _lambda,
+    Duration,
+    aws_events as _events,
+    aws_events_targets as _events_targets,
 )
 
 from constructs import Construct
@@ -43,13 +47,18 @@ class RedshiftStack(Stack):
         )
 
         rs_security_group.add_ingress_rule(sg_security_group, _ec2.Port.tcp(5439))
+        rs_security_group.add_ingress_rule(rs_security_group, _ec2.Port.tcp(5439))
 
         redshift_password = _sm.Secret(
             self,
             "redshift_password",
             description="Redshift password",
-            secret_name="REDSHIFT_PASSWORD",
-            generate_secret_string=_sm.SecretStringGenerator(exclude_punctuation=True),
+            secret_name=redshift_config['secret_name'],
+            generate_secret_string=_sm.SecretStringGenerator(
+                secret_string_template=json.dumps({"username": redshift_config['admin_username']}),
+                generate_string_key="password",
+                exclude_punctuation=True
+            ),
             removal_policy=RemovalPolicy.DESTROY,
         )
 
@@ -108,23 +117,65 @@ class RedshiftStack(Stack):
         self.rs_namespace = _rs.CfnNamespace(
             self,
             "redshiftServerlessNamespace",
-            namespace_name="ns-streaming",
+            namespace_name=redshift_config['namespace_name'],
             default_iam_role_arn=rs_role.role_arn,
             iam_roles=[rs_role.role_arn],
-            admin_username=redshift_config['master_username'],
-            admin_user_password=redshift_password.secret_value.unsafe_unwrap(),
+            admin_username=redshift_config['admin_username'],
+            admin_user_password=redshift_password.secret_value_from_json("password").unsafe_unwrap(),
         )
 
         self.rs_workgroup = _rs.CfnWorkgroup(
             self,
             "redshiftServerlessWorkgroup",
-            workgroup_name="wg-streaming",
+            workgroup_name=redshift_config['workgroup_name'],
             base_capacity=32,
             namespace_name=self.rs_namespace.ref,
             security_group_ids=[rs_security_group.security_group_id],
             subnet_ids=vpc.select_subnets(
                 subnet_type=_ec2.SubnetType.PRIVATE_WITH_NAT
             ).subnet_ids,
+        )
+
+        lambda_layer = _lambda.LayerVersion(self, 
+            'refreshmv-lambda-layer',
+            code = _lambda.AssetCode('lambda/layer/python.zip'),
+            compatible_runtimes = [_lambda.Runtime.PYTHON_3_8],
+        )
+
+        refreshmv_lambda = _lambda.Function(
+            self, 'refreshmv-lambda',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            function_name='refreshmv-lambda',
+            description='Lambda function deployed using AWS CDK Python',
+            code=_lambda.AssetCode('./lambda/code/refreshmv'),
+            handler='refreshmv.lambda_handler',
+            layers = [lambda_layer],
+            environment={
+                "WORKGROUP_NAME" : redshift_config['workgroup_name'],
+                "SECRET_ARN" : redshift_password.secret_arn,
+                "DB_NAME" : redshift_config['db_name'],
+                "REFRESHMV" : redshift_config['refreshmv']
+
+            },
+            timeout=Duration.seconds(60),
+            reserved_concurrent_executions=1,
+        )
+
+        refreshmv_lambda.add_to_role_policy(
+            statement=_iam.PolicyStatement(
+                effect=_iam.Effect.ALLOW,
+                actions=["redshift-data:*", "secretsmanager:GetSecretValue"],
+                resources=["*"],
+            )
+        )
+
+        step_trigger = _events.Rule(
+            self, 'refreshmv-StepTrigger',
+            schedule=_events.Schedule.rate(Duration.seconds(60))
+        )
+
+        step_trigger.add_target(
+            _events_targets.LambdaFunction(refreshmv_lambda)
         )
 
 
@@ -169,4 +220,6 @@ class RedshiftStack(Stack):
                 subnet_type=_ec2.SubnetType.PRIVATE_WITH_NAT
             ).subnet_ids[0]
         )
+
+        
 
