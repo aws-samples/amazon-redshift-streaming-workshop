@@ -1,9 +1,6 @@
-import json
+
 from aws_cdk import (
     Stack,
-    CfnOutput,
-    RemovalPolicy,
-    Aws,
     aws_ec2 as _ec2,
     aws_iam as _iam,
     aws_redshift as _redshift,
@@ -33,10 +30,10 @@ class RedshiftStack(Stack):
             is_default=True
         )
 
-        # Create new security group to be used by redshift
-        rs_security_group = _ec2.SecurityGroup(
+        rs_security_group = _ec2.SecurityGroup.from_lookup_by_name(
             self,
             "redshiftSecurityGroup",
+            security_group_name=redshift_config['security_group_name'],
             vpc=vpc
         )
 
