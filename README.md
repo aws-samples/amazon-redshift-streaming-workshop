@@ -6,39 +6,97 @@ In this hands-on session, we will show how easy it is to build a serverless anal
 
 
 
-![image-20220601123345968](./assets/images/image-20220601123345968.png)
+![image-20220601123345968](./assets/images_v2/image-20220601123345968.png)
 
 
 
-### 1 Infrastructure Provisioning using and Cloudshell
 
-Note: This workshop will work for any AWS region where AWS Cloudshell is available. However the workshop's instructions will be using the us-east-1 region (This can also be deployed in regions without Cloudshell but will require additional steps to provision an EC2 Linux deployment instance.) 
 
-Note: In order for you to run this code you will need elevated privileges into the AWS account you are using.
+### 1 Log in to Event Engine AWS account
 
-1.1 Login to the AWS Console.
+
+
+1.X Login to the AWS Console.
 
 https://console.aws.amazon.com/console/home
 
-1.2 Open Cloudshell
+
+
+### 2 Infrastructure provisioning using AWS Cloudshell
+
+This section will work for any AWS region where AWS Cloudshell is available. 
+
+2.1 Open Cloudshell
 
 https://console.aws.amazon.com/cloudshell/home
 
-1.3 Download install script
+2.2 Download install script
 
 ```bash
 wget https://raw.githubusercontent.com/aws-samples/amazon-redshift-streaming-workshop/asean-roadshow/assets/scripts/install.sh
 ```
 
-1.4 Run installation script
+2.3 Run installation script
 
 ```
 sh install.sh
 ```
 
-1.5 Enter Redshift admin password. 
+2.4 Enter Redshift admin password: **Password123**
 
-Note: Passwords must be at least 8 chars, and contain at least one uppercase letter, one lowercase letter, and one number. Take note of this password as this will be used throughout the workshop. (i.e. Password123)
+Note: Passwords must be at least 8 chars, and contain at least one uppercase letter, one lowercase letter, and one number. Take note of this password as this will be used throughout the workshop. This script will store this password in the AWS Secrets manager for integration with other services.
+
+This will trigger the infrastructure provisioning and may take 10 to 15 minutes to complete.
+
+
+
+### 3 Create a Redshift Serverless endpoint
+
+3.1 Go to this link to set-up a Redshift serverless endpoint
+
+https://console.aws.amazon.com/redshiftv2/home?#serverless-setup
+
+
+
+3.2 Select **Customize Settings**
+
+<img src="./assets/images_v2/image-20220824124704629.png" alt="image-20220824124704629" style="zoom:50%;" />
+
+
+
+3.3 Click on **Customize admin user credentials**
+
+<img src="./assets/images_v2/image-20220824124906688.png" alt="image-20220824124906688" style="zoom: 50%;" />
+
+3.4 Specify the **Admin user password**: **Password123**
+
+This needs to be consistent with the password we specified in Step 2.4
+
+<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824125026920.png" alt="image-20220824125026920" style="zoom: 50%;" />
+
+3.5 Click on **Manage IAM roles**, then click on **Associate IAM roles**.
+
+<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824125458300.png" alt="image-20220824125458300" style="zoom: 50%;" />
+
+3.6 Select the role that has been provisioned for Redshift. It is prefixed with **RedshiftStack-redshiftClusterRole** and click **Associate IAM roles**.
+
+<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824125700214.png" alt="image-20220824125700214" style="zoom:50%;" />
+
+3.7 Click the box next to the IAM role prefixed with **RedshiftStack-redshiftClusterRole**. Click on **Set default** and then **Make default**.
+
+<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824125856604.png" alt="image-20220824125856604" style="zoom:50%;" />
+
+3.8 Leave the rest of the settings to default and Click on **Save Configuration**. It will take a few minutes to set up Amazon Redshift Serverless.
+
+
+
+
+
+
+
+
+
+### 4 Connect to Redshift through Sagemaker Notebook
 
 
 
