@@ -16,21 +16,17 @@ In this hands-on session, we will show how easy it is to build a serverless anal
 
 
 
-Running the workshop at an AWS Event
+This workshop creates an AWS account. You will need the **Event Hash** provided by the workshop facilitators.
 
-This workshop creates an AWS account. You will need the **Event Hash** provided upon entry, and your email address to track your unique session.
-
-Connect to the portal by clicking the button or browsing to [https://dashboard.eventengine.run/](https://dashboard.eventengine.run/). The following screen shows up.
+Connect to the portal by browsing to [https://dashboard.eventengine.run/](https://dashboard.eventengine.run/). The following screen shows up.
 
 <img src="./assets/images_v2/image-20220824153523602.png" alt="image-20220824153523602" style="zoom:50%;" />
 
-Enter the provided hash in the text box. The button on the bottom right corner changes to **Accept Terms & Login**. Click on that button to continue.
+Enter the provided **Event hash** in the text box. And click **Accept Terms & Login**. 
 
 Click on **Email One-Time Password (OTP)**.
 
 Enter **Email** (company email address) and click **Send passcode**.
-
-
 
 <img src="./assets/images_v2/image-20220824153641600.png" alt="image-20220824153641600" style="zoom:50%;" />
 
@@ -50,7 +46,9 @@ Click on **Open Console**. This will open AWS Console in a new browser tab.
 
 
 
-### 2 Infrastructure provisioning using AWS Cloudshell
+### 2 Infrastructure provisioning using AWS CDK and AWS Cloudshell
+
+The AWS Cloud Development Kit ([AWS CDK](https://aws.amazon.com/cdk/)) is an open-source project that allows you to define your cloud infrastructure using familiar programming languages. In this workshop, we are using Python to define the cloud infrastructure as it is familiar to many analytics professionals. 
 
 This section will work for any AWS region where AWS Cloudshell is available. 
 
@@ -74,7 +72,7 @@ sh install.sh
 
 Note: Passwords must be at least 8 chars, and contain at least one uppercase letter, one lowercase letter, and one number. Take note of this password as this will be used throughout the workshop. This script will store this password in the AWS Secrets manager for integration with other services.
 
-This will trigger the infrastructure provisioning and may take 10 to 15 minutes to complete.
+This will trigger the infrastructure provisioning using CDK and may take 10 to 15 minutes to complete.
 
 
 
@@ -122,7 +120,7 @@ This needs to be consistent with the password we specified in Step 2.4
 
 
 
-### 4 Setting up Glue Data Catalog
+### 4 Setting up the Glue Data Catalog
 
 
 
@@ -140,7 +138,7 @@ https://console.aws.amazon.com/sagemaker/home?#/notebook-instances
 
 <img src="./assets/images_v2/image-20220824135644496.png" alt="image-20220824135644496" style="zoom:50%;" />
 
-5.4 Execute the initialisation cell which establishes integration between Amazon Redshift and Sagemaker notebook. Click on the cell block and press **Shift + Enter**.
+5.4 Execute the initialisation cell which establishes the integration between Amazon Redshift and Sagemaker notebook. Click on the cell block and press **Shift + Enter**.
 
 <img src="./assets/images_v2/image-20220824140610463.png" alt="image-20220824140610463" style="zoom:50%;" />
 
@@ -162,7 +160,7 @@ FROM KINESIS
 IAM_ROLE default;
 ```
 
-5.7 Create a materialized view to ingest the streaming data into Redshift. This uses the new Redshift streaming feature. The data in kinesis data stream is in a JSON format and this can be ingested as is into Redshift using the SUPER data type
+5.7 Create a materialized view to ingest the streaming data into Redshift. This uses the new Redshift streaming feature. The data in Kinesis data stream is in a JSON format and this can be ingested as is into Redshift using the SUPER data type
 
 ```sql
 %%sql
@@ -186,7 +184,7 @@ REFRESH MATERIALIZED VIEW order_stream_json;
 SELECT * FROM order_stream_json LIMIT 5;
 ```
 
-5.10 It is easy to unpack individual attributes in the super data type. In this example, we are extracting the delivery state and origin state attributes from the JSON data. Using this information, we can identify what is the top 5 busiest consignment routes between states.
+5.10 It is easy to unpack individual attributes in the super data type. In this example, we are extracting the delivery state and origin state attributes from  JSON. Using this information, we can identify what is the top 5 busiest consignment routes between states.
 
 ```sql
 %%sql
@@ -250,6 +248,5 @@ ORDER BY ApproximateArrivalTimestamp desc LIMIT 5;
 ```
 
 5.16 Add queries that join streaming data with historical data
-
 
 ### 6 Quicksight
