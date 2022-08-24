@@ -36,7 +36,7 @@ Enter **Email** (company email address) and click **Send passcode**.
 
 It may take a few minutes to receive your passcode through your email. Enter the passcode and click **Sign in**.
 
-<img src="/Users/pvillena/Library/Application Support/typora-user-images/image-20220824153908514.png" alt="image-20220824153908514" style="zoom:50%;" />
+<img src="./assets/images_v2/image-20220824153908514.png" alt="image-20220824153908514" style="zoom:50%;" />
 
 This should redirect you to the Team Dashboard. Click on **Set Team Name** and specify your name to help us link the account to the user.
 
