@@ -72,23 +72,23 @@ https://console.aws.amazon.com/redshiftv2/home?#serverless-setup
 
 This needs to be consistent with the password we specified in Step 2.4
 
-<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824125026920.png" alt="image-20220824125026920" style="zoom: 50%;" />
+<img src="./assets/images_v2/image-20220824125026920.png" alt="image-20220824125026920" style="zoom: 50%;" />
 
 3.5 Click on **Manage IAM roles**, then click on **Associate IAM roles**.
 
-<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824125458300.png" alt="image-20220824125458300" style="zoom: 50%;" />
+<img src="./assets/images_v2/image-20220824125458300.png" alt="image-20220824125458300" style="zoom: 50%;" />
 
 3.6 Select the role that has been provisioned for Redshift. It is prefixed with **RedshiftStack-redshiftClusterRole** and click **Associate IAM roles**.
 
-<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824125700214.png" alt="image-20220824125700214" style="zoom:50%;" />
+<img src="./assets/images_v2/image-20220824125700214.png" alt="image-20220824125700214" style="zoom:50%;" />
 
 3.7 Click the box next to the IAM role prefixed with **RedshiftStack-redshiftClusterRole**. Click on **Set default** and then **Make default**.
 
-<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824125856604.png" alt="image-20220824125856604" style="zoom:50%;" />
+<img src="./assets/images_v2/image-20220824125856604.png" alt="image-20220824125856604" style="zoom:50%;" />
 
-3.8 Leave the rest of the settings to default and Click on **Save Configuration**. It will take a few minutes to set up Amazon Redshift Serverless.
+3.8 Leave the rest of the settings to default and Click on **Save Configuration**. It will take a few minutes to set up Amazon Redshift Serverless. Once finished click **Continue**.
 
-
+![image-20220824132841878](./assets/images_v2/image-20220824132841878.png)
 
 
 
@@ -98,7 +98,13 @@ This needs to be consistent with the password we specified in Step 2.4
 
 ### 4 Connect to Redshift through Sagemaker Notebook
 
+4.1 Go to Sagemaker notebook console
 
+https://console.aws.amazon.com/sagemaker/home?#/notebook-instances
 
+4.2 There will be a notebook instance already provisioned. Click on **Open JupyterLab**.
 
+![image-20220824133144440](./assets/images_v2/image-20220824133144440.png)
+
+4.3 This notebook comes preinstalled with a python notebook **redshift.ipynb**. Double click on this notebook.
 
