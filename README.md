@@ -249,7 +249,7 @@ FROM order_stream
 ORDER BY ApproximateArrivalTimestamp desc LIMIT 5;
 ```
 
-5.15 <Add queries that join streaming data with historical data>
+5.16 Add queries that join streaming data with historical data
 
 
 ### 6 Quicksight
