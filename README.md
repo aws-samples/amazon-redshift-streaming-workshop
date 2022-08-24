@@ -116,11 +116,107 @@ https://console.aws.amazon.com/sagemaker/home?#/notebook-instances
 
 4.5 Test connectivity by executing a simple query to get the current user and current timestamp from Redshift
 
-```
+```sql
 %%sql
 SELECT CURRENT_USER, CURRENT_TIMESTAMP
 ```
 
 <img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824140704498.png" alt="image-20220824140704498" style="zoom:50%;" />
 
-4.6 
+4.6 Create an external schema to establish connection between the Redshift cluster and the Kinesis data stream.
+
+```sql
+%%sql
+CREATE EXTERNAL SCHEMA kinesis_schema
+FROM KINESIS
+IAM_ROLE default;
+```
+
+4.7 Create a materialized view to ingest the streaming data into Redshift. This uses the new Redshift streaming feature. The data in kinesis data stream is in a JSON format and this can be ingested as is into Redshift using the SUPER data type
+
+```sql
+%%sql
+CREATE MATERIALIZED VIEW order_stream_json AS
+SELECT ApproximateArrivalTimestamp, JSON_PARSE(from_varbyte(Data, 'utf-8'))  order_json
+FROM kinesis_schema.order_stream
+WHERE is_utf8(Data) AND is_valid_json(from_varbyte(Data, 'utf-8'));
+```
+
+4.8 Refresh the materialized views. This is where the actual data ingestion happens. Data gets loaded from the kinesis data stream into Amazon S3 without having to stage it first in S3. This allows us to achieve faster performance and improved latency.
+
+```sql
+%%sql
+REFRESH MATERIALIZED VIEW order_stream_json;
+```
+
+4.9 Now we can run a query against our streaming data
+
+```sql
+%%sql
+SELECT * FROM order_stream_json LIMIT 5;
+```
+
+4.10 It is easy to unpack individual attributes in the super data type. In this example, we are extracting the delivery state and origin state attributes from the JSON data. Using this information, we can identify what is the top 5 busiest consignment routes between states.
+
+```sql
+%%sql
+SELECT order_json.delivery_state::VARCHAR, order_json.origin_state::VARCHAR, count(1) 
+FROM order_stream_json
+GROUP BY order_json.delivery_state, order_json.origin_state
+ORDER BY count(1) DESC LIMIT 5;
+```
+
+4.11 In this example, we are showing another way of declaring the materialized view using the same dataset. Here, we are unpacking the JSON data right at the start and storing it in a structured format with attributes represented as individual columns. This allows us to build reports directly on top of the streaming data.
+
+```sql
+%%sql
+CREATE MATERIALIZED VIEW order_stream AS
+SELECT ApproximateArrivalTimestamp, 
+JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'consignmentid', true)::BIGINT as consignmentid,
+JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'timestamp', true)::VARCHAR(50) as order_timestamp,
+JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'delivery_address', true)::VARCHAR(100) as delivery_address,
+JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'delivery_state', true)::VARCHAR(50) as delivery_state,
+JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'origin_address', true)::VARCHAR(100) as origin_address,
+JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'origin_state', true)::VARCHAR(50) as origin_state,
+JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'delay_probability', true)::VARCHAR(10) as delay_probability,
+JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'days_to_deliver', true)::INT as days_to_deliver,
+JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'delivery_distance', true)::FLOAT as delivery_distance,
+JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'userid', true)::INT as userid,
+JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'revenue', true)::FLOAT as revenue,
+JSON_EXTRACT_PATH_TEXT(from_varbyte(Data, 'utf-8'), 'cost', true)::FLOAT as cost
+FROM kinesis_schema.order_stream
+WHERE is_utf8(Data) AND is_valid_json(from_varbyte(Data, 'utf-8'));
+```
+
+4.12 Refresh the data within the materialized view. This is where the actual data ingestion happens. Data gets loaded from the kinesis data stream into Amazon S3 without having to stage it first in S3.
+
+```sql
+%%sql
+REFRESH MATERIALIZED VIEW order_stream;
+```
+
+4.13 Run a simple select query on this materialized view. Notice that each attribute are now represented as individual columns
+
+```sql
+%%sql
+select * from order_stream limit 5
+```
+
+4.14 Run a count to check how many records are there in our stream.
+
+```sql
+%%sql
+SELECT count(1) as total_records FROM order_stream limit 5;
+```
+
+4.15 We can query the most recent transactions that have been ingested into Redshift using this select statement. It compares the current_timestamp with the ApproximateArrivalTimestamp to measure ingestion latency.
+
+```
+%%sql
+REFRESH MATERIALIZED VIEW order_stream;
+SELECT current_timestamp, current_timestamp-ApproximateArrivalTimestamp as time_diff, * 
+FROM order_stream
+ORDER BY ApproximateArrivalTimestamp desc LIMIT 5;
+```
+
+4.15 <Add queries that join streaming data with historical data>
