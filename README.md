@@ -22,7 +22,7 @@ This workshop creates an AWS account. You will need the **Event Hash** provided 
 
 Connect to the portal by clicking the button or browsing to [https://dashboard.eventengine.run/](https://dashboard.eventengine.run/). The following screen shows up.
 
-<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824153523602.png" alt="image-20220824153523602" style="zoom:50%;" />
+<img src="./assets/images_v2/image-20220824153523602.png" alt="image-20220824153523602" style="zoom:50%;" />
 
 Enter the provided hash in the text box. The button on the bottom right corner changes to **Accept Terms & Login**. Click on that button to continue.
 
@@ -32,7 +32,7 @@ Enter **Email** (company email address) and click **Send passcode**.
 
 
 
-<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824153641600.png" alt="image-20220824153641600" style="zoom:50%;" />
+<img src="./assets/images_v2/image-20220824153641600.png" alt="image-20220824153641600" style="zoom:50%;" />
 
 It may take a few minutes to receive your passcode through your email. Enter the passcode and click **Sign in**.
 
@@ -42,7 +42,7 @@ This should redirect you to the Team Dashboard. Click on **Set Team Name** and s
 
 Click on **AWS Console**. 
 
-<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824154339299.png" alt="image-20220824154339299" style="zoom:50%;" />
+<img src="./assets/images_v2/image-20220824154339299.png" alt="image-20220824154339299" style="zoom:50%;" />
 
 Click on **Open Console**. This will open AWS Console in a new browser tab.
 
