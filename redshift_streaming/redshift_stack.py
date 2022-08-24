@@ -161,7 +161,7 @@ class RedshiftStack(Stack):
         refreshmv_lambda.add_to_role_policy(
             statement=_iam.PolicyStatement(
                 effect=_iam.Effect.ALLOW,
-                actions=["redshift-data:*", "secretsmanager:GetSecretValue"],
+                actions=["redshift-data:*", "secretsmanager:*"],
                 resources=["*"],
             )
         )

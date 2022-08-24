@@ -13,7 +13,7 @@ done
 aws secretsmanager create-secret \
     --name REDSHIFT_PASSWORD \
     --description "Redshift password" \
-    --secret-string "{\"user\":\"admin\",\"password\":\"$password\"}"
+    --secret-string "{\"username\":\"admin\",\"password\":\"$password\"}"
 sudo npm install -g aws-cdk@latest
 git clone https://github.com/aws-samples/amazon-redshift-streaming-workshop --branch asean-roadshow
 cd amazon-redshift-streaming-workshop

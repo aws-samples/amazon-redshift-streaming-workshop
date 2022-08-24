@@ -82,7 +82,7 @@ This needs to be consistent with the password we specified in Step 2.4
 
 <img src="./assets/images_v2/image-20220824125700214.png" alt="image-20220824125700214" style="zoom:50%;" />
 
-3.7 Click the box next to the IAM role prefixed with **RedshiftStack-redshiftClusterRole**. Click on **Set default** and then **Make default**.
+3.7 Click the box next to the IAM role prefixed with **RedshiftStack-redshiftClusterRole**. Click on **Set default** and then **Make default**. At the prompt, click **Confirm**.
 
 <img src="./assets/images_v2/image-20220824125856604.png" alt="image-20220824125856604" style="zoom:50%;" />
 
@@ -108,3 +108,19 @@ https://console.aws.amazon.com/sagemaker/home?#/notebook-instances
 
 4.3 This notebook comes preinstalled with a python notebook **redshift.ipynb**. Double click on this notebook.
 
+<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824135644496.png" alt="image-20220824135644496" style="zoom:50%;" />
+
+4.4 Execute the initialisation cell which establishes integration between Amazon Redshift and Sagemaker notebook. Click on the cell block and press **Shift + Enter**.
+
+<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824140610463.png" alt="image-20220824140610463" style="zoom:50%;" />
+
+4.5 Test connectivity by executing a simple query to get the current user and current timestamp from Redshift
+
+```
+%%sql
+SELECT CURRENT_USER, CURRENT_TIMESTAMP
+```
+
+<img src="/Users/pvillena/PycharmProjects/asean-roadshow/amazon-redshift-streaming-workshop/assets/images_v2/image-20220824140704498.png" alt="image-20220824140704498" style="zoom:50%;" />
+
+4.6 
