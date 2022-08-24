@@ -12,13 +12,15 @@ def lambda_handler(event, context):
     LOGGER.setLevel(logging.DEBUG)
     
     workgroup_name = os.getenv("WORKGROUP_NAME")
-    secret_arn = os.getenv("SECRET_ARN")
+    secret_name = os.getenv("SECRET_NAME")
     db_name = os.getenv("DB_NAME")
     refreshmv = os.getenv("REFRESHMV")
     
     try:
         redshift_data_client = boto3.client('redshift-data')
-
+        secretsmanager_client = boto3.client('secretsmanager')
+        secret_arn = secretsmanager_client.describe_secret(SecretId=secret_name)['ARN']
+        
         for i in range(10):
             response = redshift_data_client.execute_statement(
                 Database=db_name,

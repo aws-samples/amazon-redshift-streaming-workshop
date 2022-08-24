@@ -27,10 +27,10 @@ class RedshiftStack(Stack):
         redshift_config = self.node.try_get_context(f'{environment}_redshift_config')
         sagemaker_config = self.node.try_get_context(f'{environment}_sagemaker_config')
 
-        vpc = _ec2.Vpc(
+        vpc = _ec2.Vpc.from_lookup(
             self,
             "VpcId",
-            max_azs=redshift_config['max_azs']
+            is_default=True
         )
 
         # Create new security group to be used by redshift
@@ -49,18 +49,18 @@ class RedshiftStack(Stack):
         rs_security_group.add_ingress_rule(sg_security_group, _ec2.Port.tcp(5439))
         rs_security_group.add_ingress_rule(rs_security_group, _ec2.Port.tcp(5439))
 
-        redshift_password = _sm.Secret(
-            self,
-            "redshift_password",
-            description="Redshift password",
-            secret_name=redshift_config['secret_name'],
-            generate_secret_string=_sm.SecretStringGenerator(
-                secret_string_template=json.dumps({"username": redshift_config['admin_username']}),
-                generate_string_key="password",
-                exclude_punctuation=True
-            ),
-            removal_policy=RemovalPolicy.DESTROY,
-        )
+        # redshift_password = _sm.Secret(
+        #     self,
+        #     "redshift_password",
+        #     description="Redshift password",
+        #     secret_name=redshift_config['secret_name'],
+        #     generate_secret_string=_sm.SecretStringGenerator(
+        #         secret_string_template=json.dumps({"username": redshift_config['admin_username']}),
+        #         generate_string_key="password",
+        #         exclude_punctuation=True
+        #     ),
+        #     removal_policy=RemovalPolicy.DESTROY,
+        # )
 
         rs_role = _iam.Role(
             self, "redshiftClusterRole",
@@ -114,27 +114,27 @@ class RedshiftStack(Stack):
         order_stream = ingestion_stack.get_order_stream
         order_stream.grant_read_write(rs_role)
         
-        self.rs_namespace = _rs.CfnNamespace(
-            self,
-            "redshiftServerlessNamespace",
-            namespace_name=redshift_config['namespace_name'],
-            default_iam_role_arn=rs_role.role_arn,
-            iam_roles=[rs_role.role_arn],
-            admin_username=redshift_config['admin_username'],
-            admin_user_password=redshift_password.secret_value_from_json("password").unsafe_unwrap(),
-        )
+        # self.rs_namespace = _rs.CfnNamespace(
+        #     self,
+        #     "redshiftServerlessNamespace",
+        #     namespace_name=redshift_config['namespace_name'],
+        #     default_iam_role_arn=rs_role.role_arn,
+        #     iam_roles=[rs_role.role_arn],
+        #     admin_username=redshift_config['admin_username'],
+        #     admin_user_password=redshift_password.secret_value_from_json("password").unsafe_unwrap(),
+        # )
 
-        self.rs_workgroup = _rs.CfnWorkgroup(
-            self,
-            "redshiftServerlessWorkgroup",
-            workgroup_name=redshift_config['workgroup_name'],
-            base_capacity=32,
-            namespace_name=self.rs_namespace.ref,
-            security_group_ids=[rs_security_group.security_group_id],
-            subnet_ids=vpc.select_subnets(
-                subnet_type=_ec2.SubnetType.PRIVATE_WITH_NAT
-            ).subnet_ids,
-        )
+        # self.rs_workgroup = _rs.CfnWorkgroup(
+        #     self,
+        #     "redshiftServerlessWorkgroup",
+        #     workgroup_name=redshift_config['workgroup_name'],
+        #     base_capacity=32,
+        #     namespace_name=self.rs_namespace.ref,
+        #     security_group_ids=[rs_security_group.security_group_id],
+        #     subnet_ids=vpc.select_subnets(
+        #         subnet_type=_ec2.SubnetType.PUBLIC
+        #     ).subnet_ids,
+        # )
 
         lambda_layer = _lambda.LayerVersion(self, 
             'refreshmv-lambda-layer',
@@ -152,9 +152,9 @@ class RedshiftStack(Stack):
             layers = [lambda_layer],
             environment={
                 "WORKGROUP_NAME" : redshift_config['workgroup_name'],
-                "SECRET_ARN" : redshift_password.secret_arn,
                 "DB_NAME" : redshift_config['db_name'],
-                "REFRESHMV" : redshift_config['refreshmv']
+                "REFRESHMV" : redshift_config['refreshmv'],
+                "SECRET_NAME": redshift_config['secret_name']
 
             },
             timeout=Duration.seconds(60),
@@ -217,7 +217,7 @@ class RedshiftStack(Stack):
             platform_identifier=sagemaker_config['platform_identifier'],
             security_group_ids=[sg_security_group.security_group_id],
             subnet_id=vpc.select_subnets(
-                subnet_type=_ec2.SubnetType.PRIVATE_WITH_NAT
+                subnet_type=_ec2.SubnetType.PUBLIC
             ).subnet_ids[0]
         )
 
