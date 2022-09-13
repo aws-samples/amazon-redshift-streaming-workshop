@@ -19,14 +19,14 @@ from pathlib import Path
 
 class IngestionStack(Stack):
 
-    def __init__(self, scope: Construct, construct_id: str, init_stack, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, redshift_stack, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         
         environment = self.node.try_get_context('environment')
         glue_config = self.node.try_get_context(f'{environment}_glue_config')
 
-        s3_bucket_raw = init_stack.get_s3_bucket_raw
-        order_stream = init_stack.get_order_stream
+        s3_bucket_raw = redshift_stack.get_s3_bucket_raw
+        order_stream = redshift_stack.get_order_stream
 
         dynamodb_table = _dynamodb.Table(
             self, "Table",
