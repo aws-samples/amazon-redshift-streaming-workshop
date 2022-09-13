@@ -3,8 +3,6 @@ import os
 import constants
 
 import aws_cdk as cdk
-from cdk_nag import AwsSolutionsChecks
-from aws_cdk import Aspects
 
 from redshift_streaming.ingestion_stack import IngestionStack
 from redshift_streaming.redshift_stack import RedshiftStack
