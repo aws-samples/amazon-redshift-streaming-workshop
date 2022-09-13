@@ -17,6 +17,10 @@ context_constants = {
         "region": os.environ["CDK_DEFAULT_REGION"],
         "app_name": APP_NAME
     },
+    # Glue Configuration,
+    "dev_glue_config": {
+        "glue_db": f"spectrumdb",
+    },
     # Kinesis Configuration,
     "dev_kinesis_config": {
         "stream_name": f"order-stream",
@@ -39,6 +43,7 @@ context_constants = {
         "node_type": "ra3.4xlarge",
         "secret_name": "REDSHIFT_PASSWORD",
         "refreshmv": "order_stream",
+        "quicksight_ip": "52.23.63.224/27"
     },
     "dev_sagemaker_config":{
         "content": base64.b64encode(startup_script.encode('utf-8')).decode("utf-8"),

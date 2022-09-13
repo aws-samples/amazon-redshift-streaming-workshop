@@ -17,13 +17,15 @@ from constructs import Construct
 
 class RedshiftStack(Stack):
 
-    def __init__(self, scope: Construct, construct_id: str, ingestion_stack, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, init_stack, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         environment = self.node.try_get_context('environment')
         redshift_config = self.node.try_get_context(f'{environment}_redshift_config')
         sagemaker_config = self.node.try_get_context(f'{environment}_sagemaker_config')
 
+        rs_role = init_stack.get_rs_role
+        
         vpc = _ec2.Vpc.from_lookup(
             self,
             "VpcId",
@@ -45,93 +47,10 @@ class RedshiftStack(Stack):
 
         rs_security_group.add_ingress_rule(sg_security_group, _ec2.Port.tcp(5439))
         rs_security_group.add_ingress_rule(rs_security_group, _ec2.Port.tcp(5439))
-
-        # redshift_password = _sm.Secret(
-        #     self,
-        #     "redshift_password",
-        #     description="Redshift password",
-        #     secret_name=redshift_config['secret_name'],
-        #     generate_secret_string=_sm.SecretStringGenerator(
-        #         secret_string_template=json.dumps({"username": redshift_config['admin_username']}),
-        #         generate_string_key="password",
-        #         exclude_punctuation=True
-        #     ),
-        #     removal_policy=RemovalPolicy.DESTROY,
-        # )
-
-        rs_role = _iam.Role(
-            self, "redshiftClusterRole",
-            assumed_by=_iam.ServicePrincipal(
-                "redshift.amazonaws.com"),
-            managed_policies=[
-                _iam.ManagedPolicy.from_aws_managed_policy_name(
-                    "AmazonRedshiftAllCommandsFullAccess"
-                )
-            ]
+        rs_security_group.add_ingress_rule(
+            _ec2.Peer.ipv4(f"{redshift_config['quicksight_ip']}"), 
+            _ec2.Port.tcp(5439)
         )
-
-        _iam.ManagedPolicy(
-            self,
-            "spectrum_lake_formation_policy",
-            description="Provide access between Redshift Spectrum and Lake Formation",
-            statements=[
-                _iam.PolicyStatement(
-                    effect=_iam.Effect.ALLOW,
-                    actions=[
-                        "glue:CreateDatabase",
-                        "glue:DeleteDatabase",
-                        "glue:GetDatabase",
-                        "glue:GetDatabases",
-                        "glue:UpdateDatabase",
-                        "glue:CreateTable",
-                        "glue:DeleteTable",
-                        "glue:BatchDeleteTable",
-                        "glue:UpdateTable",
-                        "glue:GetTable",
-                        "glue:GetTables",
-                        "glue:BatchCreatePartition",
-                        "glue:CreatePartition",
-                        "glue:DeletePartition",
-                        "glue:BatchDeletePartition",
-                        "glue:UpdatePartition",
-                        "glue:GetPartition",
-                        "glue:GetPartitions",
-                        "glue:BatchGetPartition",
-                        "lakeformation:GetDataAccess",
-                    ],
-                    resources=["*"],
-                )
-            ],
-            roles=[rs_role],
-        )
-
-        s3_bucket_raw = ingestion_stack.get_s3_bucket_raw
-        s3_bucket_raw.grant_read_write(rs_role)
-
-        order_stream = ingestion_stack.get_order_stream
-        order_stream.grant_read_write(rs_role)
-        
-        # self.rs_namespace = _rs.CfnNamespace(
-        #     self,
-        #     "redshiftServerlessNamespace",
-        #     namespace_name=redshift_config['namespace_name'],
-        #     default_iam_role_arn=rs_role.role_arn,
-        #     iam_roles=[rs_role.role_arn],
-        #     admin_username=redshift_config['admin_username'],
-        #     admin_user_password=redshift_password.secret_value_from_json("password").unsafe_unwrap(),
-        # )
-
-        # self.rs_workgroup = _rs.CfnWorkgroup(
-        #     self,
-        #     "redshiftServerlessWorkgroup",
-        #     workgroup_name=redshift_config['workgroup_name'],
-        #     base_capacity=32,
-        #     namespace_name=self.rs_namespace.ref,
-        #     security_group_ids=[rs_security_group.security_group_id],
-        #     subnet_ids=vpc.select_subnets(
-        #         subnet_type=_ec2.SubnetType.PUBLIC
-        #     ).subnet_ids,
-        # )
 
         lambda_layer = _lambda.LayerVersion(self, 
             'refreshmv-lambda-layer',
