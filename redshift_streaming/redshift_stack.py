@@ -17,15 +17,15 @@ from constructs import Construct
 
 class RedshiftStack(Stack):
 
-    def __init__(self, scope: Construct, construct_id: str, init_stack, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         environment = self.node.try_get_context('environment')
         redshift_config = self.node.try_get_context(f'{environment}_redshift_config')
         sagemaker_config = self.node.try_get_context(f'{environment}_sagemaker_config')
 
-        rs_role = init_stack.get_rs_role
-        
+
+
         vpc = _ec2.Vpc.from_lookup(
             self,
             "VpcId",

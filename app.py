@@ -19,8 +19,9 @@ env=cdk.Environment(
 init_stack = InitStack(app,  "InitStack", env=env)
 #add S3 in ingestion stack      
 ingestion_stack = IngestionStack(app,  "IngestionStack", env=env, init_stack=init_stack)
+
 #add ec2 in redshift stack
-redshift_stack = RedshiftStack(app, "RedshiftStack", env=env, init_stack=init_stack)
+redshift_stack = RedshiftStack(app, "RedshiftStack", env=env)
 
 
 app.synth()

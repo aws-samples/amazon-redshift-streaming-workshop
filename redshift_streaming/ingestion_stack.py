@@ -6,13 +6,11 @@ from aws_cdk import (
     aws_iam as _iam,
     aws_lambda as _lambda,
     aws_dynamodb as _dynamodb,
-    aws_kinesis as _kinesis,
     aws_logs as _logs,    
     custom_resources as _cr,
     aws_events as _events,
     aws_glue as _glue,
     aws_events_targets as _events_targets,
-    aws_s3 as _s3,
     aws_s3_deployment as _s3_deploy,
 )
 from constructs import Construct
@@ -25,19 +23,10 @@ class IngestionStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
         
         environment = self.node.try_get_context('environment')
-        kinesis_config = self.node.try_get_context(f'{environment}_kinesis_config')
         glue_config = self.node.try_get_context(f'{environment}_glue_config')
 
-        rs_role = init_stack.get_rs_role
-
-        order_stream = _kinesis.Stream(
-            self,
-            "order-stream",
-            stream_name="order_stream",
-            retention_period=Duration.hours(kinesis_config['retention_period']),
-            stream_mode=_kinesis.StreamMode.ON_DEMAND,
-            encryption=_kinesis.StreamEncryption.UNENCRYPTED
-        )
+        s3_bucket_raw = init_stack.get_s3_bucket_raw
+        order_stream = init_stack.get_order_stream
 
         dynamodb_table = _dynamodb.Table(
             self, "Table",
@@ -71,7 +60,7 @@ class IngestionStack(Stack):
 
         order_stream.grant_read_write(order_lambda)
         dynamodb_table.grant_read_write_data(order_lambda)
-        order_stream.grant_read(rs_role)
+
 
         step_trigger = _events.Rule(
             self, 'StepTrigger',
@@ -80,16 +69,6 @@ class IngestionStack(Stack):
         
         step_trigger.add_target(
             _events_targets.LambdaFunction(order_lambda)
-        )
-
-        s3_bucket_raw = _s3.Bucket(
-            self,
-            "s3_raw",
-            encryption=_s3.BucketEncryption.S3_MANAGED,
-            public_read_access=False,
-            block_public_access=_s3.BlockPublicAccess.BLOCK_ALL,
-            removal_policy=RemovalPolicy.DESTROY,
-            auto_delete_objects=True,
         )
 
         _s3_deploy.BucketDeployment(
@@ -136,8 +115,7 @@ class IngestionStack(Stack):
         )
 
         s3_bucket_raw.grant_read_write(crawler_role)
-        s3_bucket_raw.grant_read_write(rs_role)
-
+        
         # the raw bucket crawler
         crawler_raw = _glue.CfnCrawler(
             self,
@@ -168,3 +146,7 @@ class IngestionStack(Stack):
         )
 
         
+
+
+
+
