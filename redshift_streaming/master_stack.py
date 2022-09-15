@@ -32,10 +32,51 @@ class MasterStack(Stack):
         redshift_config = self.node.try_get_context(f'{environment}_redshift_config')
         sagemaker_config = self.node.try_get_context(f'{environment}_sagemaker_config')
 
-        rs_role = _iam.Role.from_role_name(
+        rs_role = _iam.Role(
+            self, "redshiftClusterRole",
+            assumed_by=_iam.ServicePrincipal(
+                "redshift.amazonaws.com"),
+            managed_policies=[
+                _iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "AmazonRedshiftAllCommandsFullAccess"
+                )
+            ],
+            role_name="RedshiftServerlessRole-AWS-Workshop"
+        )
+
+        _iam.ManagedPolicy(
             self,
-            "RedshiftRole",
-            role_name="RedshiftClusterRole-AWS-Workshop"
+            "spectrum_lake_formation_policy",
+            description="Provide access between Redshift Spectrum and Lake Formation",
+            statements=[
+                _iam.PolicyStatement(
+                    effect=_iam.Effect.ALLOW,
+                    actions=[
+                        "glue:CreateDatabase",
+                        "glue:DeleteDatabase",
+                        "glue:GetDatabase",
+                        "glue:GetDatabases",
+                        "glue:UpdateDatabase",
+                        "glue:CreateTable",
+                        "glue:DeleteTable",
+                        "glue:BatchDeleteTable",
+                        "glue:UpdateTable",
+                        "glue:GetTable",
+                        "glue:GetTables",
+                        "glue:BatchCreatePartition",
+                        "glue:CreatePartition",
+                        "glue:DeletePartition",
+                        "glue:BatchDeletePartition",
+                        "glue:UpdatePartition",
+                        "glue:GetPartition",
+                        "glue:GetPartitions",
+                        "glue:BatchGetPartition",
+                        "lakeformation:GetDataAccess",
+                    ],
+                    resources=["*"],
+                )
+            ],
+            roles=[rs_role],
         )
 
         vpc = _ec2.Vpc.from_lookup(
