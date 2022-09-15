@@ -1,0 +1,822 @@
+Parameters:
+  EEAssetsBucket:
+    Description: "Region-specific assets S3 bucket name (e.g. ee-assets-prod-us-east-1)"
+    Type: String
+  EEAssetsKeyPrefix:
+    Description: "S3 key prefix where this modules assets are stored. (e.g. modules/my_module/v1/)"
+    Type: String
+Resources:
+  redshiftClusterRole4D302097:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: redshift.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/AmazonRedshiftAllCommandsFullAccess
+      RoleName: RedshiftClusterRole-AWS-Workshop
+    Metadata:
+      aws:cdk:path: MasterStack/redshiftClusterRole/Resource
+  spectrumlakeformationpolicy2FB9F149:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - glue:BatchCreatePartition
+              - glue:BatchDeletePartition
+              - glue:BatchDeleteTable
+              - glue:BatchGetPartition
+              - glue:CreateDatabase
+              - glue:CreatePartition
+              - glue:CreateTable
+              - glue:DeleteDatabase
+              - glue:DeletePartition
+              - glue:DeleteTable
+              - glue:GetDatabase
+              - glue:GetDatabases
+              - glue:GetPartition
+              - glue:GetPartitions
+              - glue:GetTable
+              - glue:GetTables
+              - glue:UpdateDatabase
+              - glue:UpdatePartition
+              - glue:UpdateTable
+              - lakeformation:GetDataAccess
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      Description: Provide access between Redshift Spectrum and Lake Formation
+      Path: /
+      Roles:
+        - Ref: redshiftClusterRole4D302097
+    Metadata:
+      aws:cdk:path: MasterStack/spectrum_lake_formation_policy/Resource
+  sagemakerRole9D51863C:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/AmazonRedshiftFullAccess
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/AmazonSageMakerFullAccess
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/AmazonRedshiftDataFullAccess
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/SecretsManagerReadWrite
+    Metadata:
+      aws:cdk:path: MasterStack/sagemakerRole/Resource
+  sagemakerLifecycleConfig:
+    Type: AWS::SageMaker::NotebookInstanceLifecycleConfig
+    Properties:
+      NotebookInstanceLifecycleConfigName: pip-dependencies
+      OnCreate:
+        - Content: IyEvYmluL2Jhc2gKc2V0IC1lCnN1ZG8gLXUgZWMyLXVzZXIgLWkgPDwnRU9GJwojIFBBUkFNRVRFUlMKRU5WSVJPTk1FTlQ9cHl0aG9uMwpzb3VyY2UgL2hvbWUvZWMyLXVzZXIvYW5hY29uZGEzL2Jpbi9hY3RpdmF0ZSAiJEVOVklST05NRU5UIgpwaXAgaW5zdGFsbCBnbG9tCnBpcCBpbnN0YWxsIC0tdXBncmFkZSBib3RvMyAKcGlwIGluc3RhbGwgLS11cGdyYWRlIGF3c2NsaQpwaXAgaW5zdGFsbCAtLXVwZ3JhZGUgcmVkc2hpZnRfY29ubmVjdG9yCnBpcCBpbnN0YWxsIHNxbGFsY2hlbXkKcGlwIGluc3RhbGwgc3FsYWxjaGVteS1yZWRzaGlmdApwaXAgaW5zdGFsbCBpcHl0aG9uLXNxbApzb3VyY2UgL2hvbWUvZWMyLXVzZXIvYW5hY29uZGEzL2Jpbi9kZWFjdGl2YXRlCndnZXQgaHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2F3cy1zYW1wbGVzL2FtYXpvbi1yZWRzaGlmdC1zdHJlYW1pbmctd29ya3Nob3AvYXNlYW4tcm9hZHNob3cvYXNzZXRzL3NjcmlwdHMvcmVkc2hpZnRfbGFiLmlweW5iIC1QIC9ob21lL2VjMi11c2VyL1NhZ2VNYWtlci8Kd2dldCBodHRwczovL3Jhdy5naXRodWJ1c2VyY29udGVudC5jb20vYXdzLXNhbXBsZXMvYW1hem9uLXJlZHNoaWZ0LXN0cmVhbWluZy13b3Jrc2hvcC9hc2Vhbi1yb2Fkc2hvdy9hc3NldHMvc2NyaXB0cy9yZWRzaGlmdF9jb21wbGV0ZWQuaXB5bmIgLVAgL2hvbWUvZWMyLXVzZXIvU2FnZU1ha2VyLwp3Z2V0IGh0dHBzOi8vcmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbS9hd3Mtc2FtcGxlcy9hbWF6b24tcmVkc2hpZnQtc3RyZWFtaW5nLXdvcmtzaG9wL2FzZWFuLXJvYWRzaG93L2Fzc2V0cy9zY3JpcHRzL2luaXQucHkgLVAgL2hvbWUvZWMyLXVzZXIvU2FnZU1ha2VyLwpFT0Y=
+    Metadata:
+      aws:cdk:path: MasterStack/sagemakerLifecycleConfig
+  sagemakerNotebook:
+    Type: AWS::SageMaker::NotebookInstance
+    Properties:
+      InstanceType: ml.t3.large
+      RoleArn:
+        Fn::GetAtt:
+          - sagemakerRole9D51863C
+          - Arn
+      LifecycleConfigName: pip-dependencies
+      PlatformIdentifier: notebook-al2-v2
+    Metadata:
+      aws:cdk:path: MasterStack/sagemakerNotebook
+  RedshiftRolePolicy75B8E6C1:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - s3:Abort*
+              - s3:DeleteObject*
+              - s3:GetBucket*
+              - s3:GetObject*
+              - s3:List*
+              - s3:PutObject
+              - s3:PutObjectLegalHold
+              - s3:PutObjectRetention
+              - s3:PutObjectTagging
+              - s3:PutObjectVersionTagging
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - s3rawA17AB27B
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - s3rawA17AB27B
+                        - Arn
+                    - /*
+          - Action:
+              - kinesis:DescribeStream
+              - kinesis:DescribeStreamSummary
+              - kinesis:GetRecords
+              - kinesis:GetShardIterator
+              - kinesis:ListShards
+              - kinesis:ListStreams
+              - kinesis:SubscribeToShard
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - orderstream9D7BFD49
+                - Arn
+        Version: "2012-10-17"
+      PolicyName: RedshiftRolePolicy75B8E6C1
+      Roles:
+        - RedshiftClusterRole-AWS-Workshop
+    Metadata:
+      aws:cdk:path: MasterStack/RedshiftRole/Policy/Resource
+  s3rawA17AB27B:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: aws-cdk:auto-delete-objects
+          Value: "true"
+        - Key: aws-cdk:cr-owned:dd0a78fa
+          Value: "true"
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MasterStack/s3_raw/Resource
+  s3rawPolicy6ACF12FD:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: s3rawA17AB27B
+      PolicyDocument:
+        Statement:
+          - Action:
+              - s3:DeleteObject*
+              - s3:GetBucket*
+              - s3:List*
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::GetAtt:
+                  - CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092
+                  - Arn
+            Resource:
+              - Fn::GetAtt:
+                  - s3rawA17AB27B
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - s3rawA17AB27B
+                        - Arn
+                    - /*
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: MasterStack/s3_raw/Policy/Resource
+  s3rawAutoDeleteObjectsCustomResource0025E28C:
+    Type: Custom::S3AutoDeleteObjects
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+          - CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F
+          - Arn
+      BucketName:
+        Ref: s3rawA17AB27B
+    DependsOn:
+      - s3rawPolicy6ACF12FD
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MasterStack/s3_raw/AutoDeleteObjectsCustomResource/Default
+  CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+      ManagedPolicyArns:
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: MasterStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Role
+  CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref EEAssetsBucket
+        S3Key: !Sub '${EEAssetsKeyPrefix}autodelete.zip'
+      Timeout: 900
+      MemorySize: 128
+      Handler: __entrypoint__.handler
+      Role:
+        Fn::GetAtt:
+          - CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092
+          - Arn
+      Runtime: nodejs14.x
+      Description:
+        Fn::Join:
+          - ""
+          - - "Lambda function for auto-deleting objects in "
+            - Ref: s3rawA17AB27B
+            - " S3 bucket."
+    DependsOn:
+      - CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092
+    Metadata:
+      aws:cdk:path: MasterStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler
+      aws:asset:path: asset.e57c1acaa363d7d2b81736776007a7091bc73dff4aeb8135627c4511a51e7dca
+      aws:asset:property: Code
+  orderstream9D7BFD49:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: order_stream
+      RetentionPeriodHours: 72
+      StreamModeDetails:
+        StreamMode: ON_DEMAND
+    Metadata:
+      aws:cdk:path: MasterStack/order-stream/Resource
+  TableCD117FA1:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: "N"
+      BillingMode: PAY_PER_REQUEST
+      TableName: latest_key
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MasterStack/Table/Resource
+  lambdalayerAEB0E7A7:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      Content:
+        S3Bucket: !Ref EEAssetsBucket
+        S3Key: !Sub '${EEAssetsKeyPrefix}lambdalayer.zip'
+      CompatibleRuntimes:
+        - python3.8
+    Metadata:
+      aws:cdk:path: MasterStack/lambda-layer/Resource
+      aws:asset:path: asset.6d75de01b61a087e70234a3ac32658d7e4ac2fd944c12ea0f0c3552d90c538e8.zip
+      aws:asset:is-bundled: false
+      aws:asset:property: Content
+  orderlambdaServiceRoleFE8A34A6:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: MasterStack/order-lambda/ServiceRole/Resource
+  orderlambdaServiceRoleDefaultPolicy0EC5E799:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - kinesis:DescribeStream
+              - kinesis:DescribeStreamSummary
+              - kinesis:GetRecords
+              - kinesis:GetShardIterator
+              - kinesis:ListShards
+              - kinesis:ListStreams
+              - kinesis:PutRecord
+              - kinesis:PutRecords
+              - kinesis:SubscribeToShard
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - orderstream9D7BFD49
+                - Arn
+          - Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:BatchWriteItem
+              - dynamodb:ConditionCheckItem
+              - dynamodb:DeleteItem
+              - dynamodb:DescribeTable
+              - dynamodb:GetItem
+              - dynamodb:GetRecords
+              - dynamodb:GetShardIterator
+              - dynamodb:PutItem
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - TableCD117FA1
+                  - Arn
+              - Ref: AWS::NoValue
+        Version: "2012-10-17"
+      PolicyName: orderlambdaServiceRoleDefaultPolicy0EC5E799
+      Roles:
+        - Ref: orderlambdaServiceRoleFE8A34A6
+    Metadata:
+      aws:cdk:path: MasterStack/order-lambda/ServiceRole/DefaultPolicy/Resource
+  orderlambdaE327FE1E:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref EEAssetsBucket
+        S3Key: !Sub '${EEAssetsKeyPrefix}orderlambda.zip'
+      Role:
+        Fn::GetAtt:
+          - orderlambdaServiceRoleFE8A34A6
+          - Arn
+      Description: Lambda function deployed using AWS CDK Python
+      Environment:
+        Variables:
+          LOG_LEVEL: INFO
+          STREAM_NAME: order_stream
+      FunctionName: order-lambda
+      Handler: order_producer.lambda_handler
+      Layers:
+        - Ref: lambdalayerAEB0E7A7
+      ReservedConcurrentExecutions: 1
+      Runtime: python3.8
+      Timeout: 60
+    DependsOn:
+      - orderlambdaServiceRoleDefaultPolicy0EC5E799
+      - orderlambdaServiceRoleFE8A34A6
+    Metadata:
+      aws:cdk:path: MasterStack/order-lambda/Resource
+      aws:asset:path: asset.b9d9ba557974d5f3eedc2c21dc04cc147a15ee7ac7f97932ce7bddfa12bd7ab3
+      aws:asset:is-bundled: false
+      aws:asset:property: Code
+  StepTriggerF2203960:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: rate(1 minute)
+      State: ENABLED
+      Targets:
+        - Arn:
+            Fn::GetAtt:
+              - orderlambdaE327FE1E
+              - Arn
+          Id: Target0
+    Metadata:
+      aws:cdk:path: MasterStack/StepTrigger/Resource
+  StepTriggerAllowEventRuleMasterStackorderlambda261D334E4D209844:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - orderlambdaE327FE1E
+          - Arn
+      Principal: events.amazonaws.com
+      SourceArn:
+        Fn::GetAtt:
+          - StepTriggerF2203960
+          - Arn
+    Metadata:
+      aws:cdk:path: MasterStack/StepTrigger/AllowEventRuleMasterStackorderlambda261D334E
+  s3deployrawAwsCliLayer2A617728:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      Content:
+        S3Bucket: !Ref EEAssetsBucket
+        S3Key: !Sub '${EEAssetsKeyPrefix}s3deployraw.zip'
+      Description: /opt/awscli/aws
+    Metadata:
+      aws:cdk:path: MasterStack/s3_deploy_raw/AwsCliLayer/Resource
+      aws:asset:path: asset.2cbb4c8a663eb2c903e9cef3ad44c9b47d48b0a2cd35dfc270a23bf93b2ecf1f.zip
+      aws:asset:is-bundled: false
+      aws:asset:property: Content
+  s3deployrawCustomResourceB6F0F86E:
+    Type: Custom::CDKBucketDeployment
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+          - CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C81C01536
+          - Arn
+      SourceBucketNames:
+        - !Ref EEAssetsBucket
+      SourceObjectKeys:
+        - !Sub '${EEAssetsKeyPrefix}s3data.zip'
+      DestinationBucketName:
+        Ref: s3rawA17AB27B
+      Prune: true
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MasterStack/s3_deploy_raw/CustomResource/Default
+  CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: MasterStack/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C/ServiceRole/Resource
+  CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRoleDefaultPolicy88902FDF:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - s3:GetBucket*
+              - s3:GetObject*
+              - s3:List*
+            Effect: Allow
+            Resource:
+              - Fn::Join:
+                  - ""
+                  - - "arn:"
+                    - Ref: AWS::Partition
+                    - !Sub ':s3:::${EEAssetsBucket}'
+              - Fn::Join:
+                  - ""
+                  - - "arn:"
+                    - Ref: AWS::Partition
+                    - !Sub ':s3:::${EEAssetsBucket}/*'
+          - Action:
+              - s3:Abort*
+              - s3:DeleteObject*
+              - s3:GetBucket*
+              - s3:GetObject*
+              - s3:List*
+              - s3:PutObject
+              - s3:PutObjectLegalHold
+              - s3:PutObjectRetention
+              - s3:PutObjectTagging
+              - s3:PutObjectVersionTagging
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - s3rawA17AB27B
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - s3rawA17AB27B
+                        - Arn
+                    - /*
+        Version: "2012-10-17"
+      PolicyName: CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRoleDefaultPolicy88902FDF
+      Roles:
+        - Ref: CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265
+    Metadata:
+      aws:cdk:path: MasterStack/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C/ServiceRole/DefaultPolicy/Resource
+  CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C81C01536:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref EEAssetsBucket
+        S3Key: !Sub '${EEAssetsKeyPrefix}cdkbucket.zip'
+      Role:
+        Fn::GetAtt:
+          - CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265
+          - Arn
+      Handler: index.handler
+      Layers:
+        - Ref: s3deployrawAwsCliLayer2A617728
+      Runtime: python3.9
+      Timeout: 900
+    DependsOn:
+      - CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRoleDefaultPolicy88902FDF
+      - CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265
+    Metadata:
+      aws:cdk:path: MasterStack/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C/Resource
+      aws:asset:path: asset.f98b78092dcdd31f5e6d47489beb5f804d4835ef86a8085d0a2053cb9ae711da
+      aws:asset:is-bundled: false
+      aws:asset:property: Code
+  csvClassifier:
+    Type: AWS::Glue::Classifier
+    Properties:
+      CsvClassifier:
+        AllowSingleColumn: false
+        ContainsHeader: PRESENT
+        Delimiter: ","
+        QuoteSymbol: '"'
+    Metadata:
+      aws:cdk:path: MasterStack/csv_Classifier
+  database:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId:
+        Ref: AWS::AccountId
+      DatabaseInput:
+        Name: spectrumdb
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MasterStack/database
+  crawlerrole40EA2665:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSGlueServiceRole
+    Metadata:
+      aws:cdk:path: MasterStack/crawler_role/Resource
+  crawlerroleDefaultPolicy82E62E28:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - s3:Abort*
+              - s3:DeleteObject*
+              - s3:GetBucket*
+              - s3:GetObject*
+              - s3:List*
+              - s3:PutObject
+              - s3:PutObjectLegalHold
+              - s3:PutObjectRetention
+              - s3:PutObjectTagging
+              - s3:PutObjectVersionTagging
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - s3rawA17AB27B
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - s3rawA17AB27B
+                        - Arn
+                    - /*
+        Version: "2012-10-17"
+      PolicyName: crawlerroleDefaultPolicy82E62E28
+      Roles:
+        - Ref: crawlerrole40EA2665
+    Metadata:
+      aws:cdk:path: MasterStack/crawler_role/DefaultPolicy/Resource
+  crawlerraw:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Role:
+        Ref: crawlerrole40EA2665
+      Targets:
+        S3Targets:
+          - Path:
+              Ref: s3rawA17AB27B
+      Classifiers:
+        - Ref: csvClassifier
+      DatabaseName: spectrumdb
+    Metadata:
+      aws:cdk:path: MasterStack/crawler_raw
+  awscustom79CCFF50:
+    Type: Custom::AWS
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+          - AWS679f53fac002430cb0da5b7982bd22872D164C4C
+          - Arn
+      Create:
+        Fn::Join:
+          - ""
+          - - '{"action":"startCrawler","service":"Glue","parameters":{"Name":"'
+            - Ref: crawlerraw
+            - '"},"physicalResourceId":{"id":"physicalResourceStateMachine"}}'
+      Update:
+        Fn::Join:
+          - ""
+          - - '{"action":"startCrawler","service":"Glue","parameters":{"Name":"'
+            - Ref: crawlerraw
+            - '"},"physicalResourceId":{"id":"physicalResourceStateMachine"}}'
+      InstallLatestAwsSdk: true
+    DependsOn:
+      - awscustomCustomResourcePolicy44EB9363
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MasterStack/aws-custom/Resource/Default
+  awscustomCustomResourcePolicy44EB9363:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: glue:StartCrawler
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: awscustomCustomResourcePolicy44EB9363
+      Roles:
+        - Ref: AWS679f53fac002430cb0da5b7982bd2287ServiceRoleC1EA0FF2
+    Metadata:
+      aws:cdk:path: MasterStack/aws-custom/CustomResourcePolicy/Resource
+  AWS679f53fac002430cb0da5b7982bd2287ServiceRoleC1EA0FF2:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: MasterStack/AWS679f53fac002430cb0da5b7982bd2287/ServiceRole/Resource
+  AWS679f53fac002430cb0da5b7982bd22872D164C4C:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref EEAssetsBucket
+        S3Key: !Sub '${EEAssetsKeyPrefix}lambdahandler.zip'
+      Role:
+        Fn::GetAtt:
+          - AWS679f53fac002430cb0da5b7982bd2287ServiceRoleC1EA0FF2
+          - Arn
+      Handler: index.handler
+      Runtime: nodejs14.x
+      Timeout: 120
+    DependsOn:
+      - AWS679f53fac002430cb0da5b7982bd2287ServiceRoleC1EA0FF2
+    Metadata:
+      aws:cdk:path: MasterStack/AWS679f53fac002430cb0da5b7982bd2287/Resource
+      aws:asset:path: asset.6dbd112fe448437b3438da4382c72fccbb7d2ee1543db222620d7447fffebc50
+      aws:asset:is-bundled: false
+      aws:asset:property: Code
+  refreshmvlambdalayerB0A27D50:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      Content:
+        S3Bucket: !Ref EEAssetsBucket
+        S3Key: !Sub '${EEAssetsKeyPrefix}lambdalayer.zip'
+      CompatibleRuntimes:
+        - python3.8
+    Metadata:
+      aws:cdk:path: MasterStack/refreshmv-lambda-layer/Resource
+      aws:asset:path: asset.6d75de01b61a087e70234a3ac32658d7e4ac2fd944c12ea0f0c3552d90c538e8.zip
+      aws:asset:is-bundled: false
+      aws:asset:property: Content
+  refreshmvlambdaServiceRole227B6B2C:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: MasterStack/refreshmv-lambda/ServiceRole/Resource
+  refreshmvlambdaServiceRoleDefaultPolicy0DC4B643:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - redshift-data:*
+              - secretsmanager:*
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: refreshmvlambdaServiceRoleDefaultPolicy0DC4B643
+      Roles:
+        - Ref: refreshmvlambdaServiceRole227B6B2C
+    Metadata:
+      aws:cdk:path: MasterStack/refreshmv-lambda/ServiceRole/DefaultPolicy/Resource
+  refreshmvlambda68D5E0CE:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref EEAssetsBucket
+        S3Key: !Sub '${EEAssetsKeyPrefix}refreshmv.zip'
+      Role:
+        Fn::GetAtt:
+          - refreshmvlambdaServiceRole227B6B2C
+          - Arn
+      Description: Lambda function deployed using AWS CDK Python
+      Environment:
+        Variables:
+          WORKGROUP_NAME: default
+          DB_NAME: dev
+          REFRESHMV: order_stream
+          SECRET_NAME: REDSHIFT_PASSWORD
+      FunctionName: refreshmv-lambda
+      Handler: refreshmv.lambda_handler
+      Layers:
+        - Ref: refreshmvlambdalayerB0A27D50
+      ReservedConcurrentExecutions: 1
+      Runtime: python3.8
+      Timeout: 60
+    DependsOn:
+      - refreshmvlambdaServiceRoleDefaultPolicy0DC4B643
+      - refreshmvlambdaServiceRole227B6B2C
+    Metadata:
+      aws:cdk:path: MasterStack/refreshmv-lambda/Resource
+      aws:asset:path: asset.74d9572867fd3a37c24c6f9057c5dd3304fba3c1a104d9732d7aee4d29293594
+      aws:asset:is-bundled: false
+      aws:asset:property: Code
+  refreshmvStepTrigger1089922C:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: rate(1 minute)
+      State: ENABLED
+      Targets:
+        - Arn:
+            Fn::GetAtt:
+              - refreshmvlambda68D5E0CE
+              - Arn
+          Id: Target0
+    Metadata:
+      aws:cdk:path: MasterStack/refreshmv-StepTrigger/Resource
+  refreshmvStepTriggerAllowEventRuleMasterStackrefreshmvlambdaB939FA11F51F6E50:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - refreshmvlambda68D5E0CE
+          - Arn
+      Principal: events.amazonaws.com
+      SourceArn:
+        Fn::GetAtt:
+          - refreshmvStepTrigger1089922C
+          - Arn
+    Metadata:
+      aws:cdk:path: MasterStack/refreshmv-StepTrigger/AllowEventRuleMasterStackrefreshmvlambdaB939FA11
+  CDKMetadata:
+    Type: AWS::CDK::Metadata
+    Properties:
+      Analytics: v2:deflate64:H4sIAAAAAAAA/21STU/sMAz8LdyzQbAHuEIRT0iAVruIa+Wm3j7TfKA4YVVV/e8vSSv2FXGyPeOOxtNcy+2NvLqAE29U2280NXI8BFC9SFA9Ehg57p1GUR1tqS9gocN25zSpIaNr4IzP3SRQXcsxzQdU0VMY/ngXP59s55FZrEDxc2sSnKQN9OiLxKsL2DjXP1kOYBU+0xHVoDRWzh6pE7+sJImtHO+j6jFkfunmcja7mufhHjh93ZNFJs6heARTLJZuEu1gwbg2BfYGzZxQaSahwTQtyPEZBvTv6JmczfRqfoxWhYX4v9+hN8Rl5UC20xjcN5+vqUdgxsDyLhfR4qd2g0Eb5Oz74RtI2X+lkszv4/IHY7bX6Yglz0onKToS+kw+QIAmHZ37ysNJo58msUd20auERg7OnMek9ju18+6L2qRZDKbH1KUzlkxqnSOo09tSmuTdiStNJRWhikbtFxEu5Ep3Ersh/HX2citv5dX24oOJNj7aQAblfq7/ALsaFHLPAgAA
+    Metadata:
+      aws:cdk:path: MasterStack/CDKMetadata/Default
