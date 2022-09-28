@@ -144,7 +144,7 @@ class MasterStack(Stack):
             security_group_ids=[sg_security_group.security_group_id],
             subnet_id=vpc.select_subnets(
                 subnet_type=_ec2.SubnetType.PUBLIC
-            ).subnet_ids[0]
+            ).subnet_ids[1]
         )
 
         s3_bucket_raw = _s3.Bucket(

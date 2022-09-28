@@ -4,9 +4,9 @@ import constants
 
 import aws_cdk as cdk
 
-from redshift_streaming.ingestion_stack import IngestionStack
-from redshift_streaming.sagemaker_stack import SagemakerStack
-from redshift_streaming.redshift_stack import RedshiftStack
+# from redshift_streaming.ingestion_stack import IngestionStack
+# from redshift_streaming.sagemaker_stack import SagemakerStack
+# from redshift_streaming.redshift_stack import RedshiftStack
 from redshift_streaming.master_stack import MasterStack
 
 app = cdk.App(context=constants.context_constants)
