@@ -14,5 +14,4 @@ pip install ipython-sql
 source /home/ec2-user/anaconda3/bin/deactivate
 wget https://raw.githubusercontent.com/aws-samples/amazon-redshift-streaming-workshop/asean-roadshow/assets/scripts/redshift_lab.ipynb -P /home/ec2-user/SageMaker/
 wget https://raw.githubusercontent.com/aws-samples/amazon-redshift-streaming-workshop/asean-roadshow/assets/scripts/redshift_completed.ipynb -P /home/ec2-user/SageMaker/
-wget https://raw.githubusercontent.com/aws-samples/amazon-redshift-streaming-workshop/asean-roadshow/assets/scripts/init.py -P /home/ec2-user/SageMaker/
 EOF
