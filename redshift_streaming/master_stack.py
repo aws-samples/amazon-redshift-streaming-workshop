@@ -15,7 +15,9 @@ from aws_cdk import (
     aws_events_targets as _events_targets,
     aws_s3_deployment as _s3_deploy,
     aws_kinesis as _kinesis,
+    aws_redshiftserverless as rs,
     aws_s3 as _s3,
+    aws_secretsmanager as _sm,
 )
 from constructs import Construct
 
@@ -100,10 +102,42 @@ class MasterStack(Stack):
 
         rs_security_group.add_ingress_rule(sg_security_group, _ec2.Port.tcp(5439))
         rs_security_group.add_ingress_rule(rs_security_group, _ec2.Port.tcp(5439))
+        #us-east-2
         rs_security_group.add_ingress_rule(
-            _ec2.Peer.ipv4(f"{redshift_config['quicksight_ip']}"), 
+            _ec2.Peer.ipv4('52.15.247.160/27'), 
             _ec2.Port.tcp(5439)
         )
+        #us-east-1
+        rs_security_group.add_ingress_rule(
+            _ec2.Peer.ipv4('52.23.63.224/27'), 
+            _ec2.Port.tcp(5439)
+        )
+        #us-west-2
+        rs_security_group.add_ingress_rule(
+            _ec2.Peer.ipv4('54.70.204.128/27'), 
+            _ec2.Port.tcp(5439)
+        )
+        #ap-southeast-2
+        rs_security_group.add_ingress_rule(
+            _ec2.Peer.ipv4('54.153.249.96/27'), 
+            _ec2.Port.tcp(5439)
+        )
+        #ap-northeast-1
+        rs_security_group.add_ingress_rule(
+            _ec2.Peer.ipv4('13.113.244.32/27'), 
+            _ec2.Port.tcp(5439)
+        )
+        #eu-west-1
+        rs_security_group.add_ingress_rule(
+            _ec2.Peer.ipv4('52.210.255.224/27'), 
+            _ec2.Port.tcp(5439)
+        )
+        #eu-west-2
+        rs_security_group.add_ingress_rule(
+            _ec2.Peer.ipv4('35.177.218.0/27'), 
+            _ec2.Port.tcp(5439)
+        )
+
 
         sg_role = _iam.Role(
             self, "sagemakerRole",
@@ -123,6 +157,32 @@ class MasterStack(Stack):
                     "SecretsManagerReadWrite"
                 ),
             ]
+        )
+
+        rs_secret = _sm.Secret.from_secret_name_v2(
+            self,
+            "redshift_secret",
+            secret_name='REDSHIFT_PASSWORD')
+
+        rs_namespace = rs.CfnNamespace(
+            self,
+            "redshiftServerlessNamespace",
+            namespace_name=redshift_config['namespace_name'],
+            db_name=redshift_config['db_name'],
+            default_iam_role_arn=rs_role.role_arn,
+            iam_roles=[rs_role.role_arn],
+            admin_username=redshift_config['admin_username'],
+            admin_user_password=rs_secret.secret_value.unsafe_unwrap(),
+        )
+
+        rs_workgroup = rs.CfnWorkgroup(
+            self,
+            "redshiftServerlessWorkgroup",
+            workgroup_name=redshift_config['workgroup_name'],
+            base_capacity=32,
+            publicly_accessible=True,
+            namespace_name=rs_namespace.ref,
+            security_group_ids=[rs_security_group.security_group_id],
         )
 
         cfn_notebook_instance_lifecycle_config = _sg.CfnNotebookInstanceLifecycleConfig(
