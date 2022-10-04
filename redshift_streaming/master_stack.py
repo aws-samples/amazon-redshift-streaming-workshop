@@ -21,6 +21,8 @@ from aws_cdk import (
 )
 from constructs import Construct
 
+import json
+
 from pathlib import Path
 
 class MasterStack(Stack):
@@ -159,11 +161,6 @@ class MasterStack(Stack):
             ]
         )
 
-        rs_secret = _sm.Secret.from_secret_name_v2(
-            self,
-            "redshift_secret",
-            secret_name='REDSHIFT_PASSWORD')
-
         rs_namespace = rs.CfnNamespace(
             self,
             "redshiftServerlessNamespace",
@@ -172,7 +169,7 @@ class MasterStack(Stack):
             default_iam_role_arn=rs_role.role_arn,
             iam_roles=[rs_role.role_arn],
             admin_username=redshift_config['admin_username'],
-            admin_user_password=rs_secret.secret_value.unsafe_unwrap(),
+            admin_user_password='Password123',
         )
 
         rs_workgroup = rs.CfnWorkgroup(
