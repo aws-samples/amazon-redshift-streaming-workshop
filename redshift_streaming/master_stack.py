@@ -17,6 +17,7 @@ from aws_cdk import (
     aws_kinesis as _kinesis,
     aws_redshiftserverless as rs,
     aws_s3 as _s3,
+    aws_rds as _rds,
     aws_secretsmanager as _sm,
 )
 from constructs import Construct
@@ -102,8 +103,32 @@ class MasterStack(Stack):
             vpc=vpc
         )
 
+        pg_security_group = _ec2.SecurityGroup(
+            self,
+            "postgresSecurityGroup",
+            vpc=vpc
+        )
+
+        qs_security_group = _ec2.SecurityGroup(
+            self,
+            "QuicksightSecurityGroup",
+            vpc=vpc
+        )
+        
+        qs_security_group.add_ingress_rule(
+            peer=rs_security_group,
+            connection=_ec2.Port.all_traffic()
+        )
+
+        pg_security_group.add_ingress_rule(rs_security_group,_ec2.Port.all_traffic())
+        pg_security_group.add_ingress_rule(pg_security_group,_ec2.Port.all_traffic())
+        pg_security_group.add_ingress_rule(sg_security_group,_ec2.Port.tcp(5432))
+
+        rs_security_group.add_ingress_rule(rs_security_group, _ec2.Port.all_traffic())
+        rs_security_group.add_ingress_rule(pg_security_group, _ec2.Port.all_traffic())
         rs_security_group.add_ingress_rule(sg_security_group, _ec2.Port.tcp(5439))
-        rs_security_group.add_ingress_rule(rs_security_group, _ec2.Port.tcp(5439))
+        rs_security_group.add_ingress_rule(qs_security_group, _ec2.Port.tcp(5439))
+
         #us-east-2
         rs_security_group.add_ingress_rule(
             _ec2.Peer.ipv4('52.15.247.160/27'), 
@@ -383,4 +408,30 @@ class MasterStack(Stack):
 
         step_trigger.add_target(
             _events_targets.LambdaFunction(refreshmv_lambda)
+        )
+
+        rds_cluster = _rds.DatabaseCluster(self, "auroraDB",
+                                          engine=_rds.DatabaseClusterEngine.aurora_postgres(
+                                              version=_rds.AuroraPostgresEngineVersion.VER_11_16),
+                                          instance_props=_rds.InstanceProps(
+                                            # optional , defaults to t3.medium
+                                            #   instance_type=_ec2.InstanceType.of(
+                                            #       _ec2.InstanceClass.BURSTABLE2, _ec2.InstanceSize.SMALL),
+                                              vpc_subnets=_ec2.SubnetSelection(
+                                                  subnet_type=_ec2.SubnetType.PUBLIC
+                                              ),
+                                              vpc=vpc,
+                                              security_groups=[pg_security_group]
+                                          ),
+                                          s3_import_buckets=[s3_bucket_raw],
+                                          storage_encrypted=True
+                                          )
+
+        rds_cluster.add_proxy(
+            "aurora-proxy",
+            borrow_timeout=Duration.seconds(30),
+            max_connections_percent=50,
+            secrets=[rds_cluster.secret],
+            security_groups=[pg_security_group],
+            vpc=vpc
         )
