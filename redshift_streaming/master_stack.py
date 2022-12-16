@@ -19,6 +19,7 @@ from aws_cdk import (
     aws_s3 as _s3,
     aws_rds as _rds,
     aws_secretsmanager as _sm,
+    SecretValue
 )
 from constructs import Construct
 
@@ -45,8 +46,7 @@ class MasterStack(Stack):
                 _iam.ManagedPolicy.from_aws_managed_policy_name(
                     "AmazonRedshiftAllCommandsFullAccess"
                 )
-            ],
-            role_name="RedshiftServerlessRole-AWS-Workshop"
+            ]
         )
 
         _iam.ManagedPolicy(
@@ -186,6 +186,27 @@ class MasterStack(Stack):
             ]
         )
 
+        redshift_password = _sm.Secret(
+            self,
+            "redshift_password",
+            description="Redshift password",
+            generate_secret_string=_sm.SecretStringGenerator(exclude_punctuation=True),
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
+        redshift_credentials = _sm.Secret(
+            self,
+            "redshift_credentials",
+            description="Redshift credentials",
+            secret_string_value=SecretValue.unsafe_plain_text(
+                json.dumps({'username':redshift_config['admin_username'], 
+                'password':redshift_password.secret_value.unsafe_unwrap()})
+                ),
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
+
+
         rs_namespace = rs.CfnNamespace(
             self,
             "redshiftServerlessNamespace",
@@ -194,7 +215,7 @@ class MasterStack(Stack):
             default_iam_role_arn=rs_role.role_arn,
             iam_roles=[rs_role.role_arn],
             admin_username=redshift_config['admin_username'],
-            admin_user_password='Password123',
+            admin_user_password=redshift_password.secret_value.unsafe_unwrap(),
         )
 
         rs_workgroup = rs.CfnWorkgroup(
