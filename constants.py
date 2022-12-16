@@ -13,8 +13,8 @@ APP_NAME = "rs-qs"
 context_constants = {
     "environment" : "dev",
     "dev_global_config": {
-        "account_id": os.environ["CDK_DEFAULT_ACCOUNT"],
-        "region": os.environ["CDK_DEFAULT_REGION"],
+        # "account_id": os.environ["CDK_DEFAULT_ACCOUNT"],
+        # "region": os.environ["CDK_DEFAULT_REGION"],
         "app_name": APP_NAME
     },
     # Glue Configuration,

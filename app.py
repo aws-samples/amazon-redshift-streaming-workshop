@@ -12,9 +12,8 @@ from redshift_streaming.master_stack import MasterStack
 app = cdk.App(context=constants.context_constants)
 #Aspects.of(app).add(AwsSolutionsChecks(verbose=True))
 environment = app.node.try_get_context("environment")
-env=cdk.Environment(
-        account=constants.context_constants[f'{environment}_global_config']['account_id'], 
-        region=constants.context_constants[f'{environment}_global_config']['region'])
+env=cdk.Environment( account = os.environ["CDK_DEFAULT_ACCOUNT"],
+        region = os.environ["CDK_DEFAULT_REGION"])
 
 MasterStack(app,  "MasterStack", env=env)
 # #add init  stack      
