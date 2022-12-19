@@ -160,7 +160,7 @@ class RedshiftStack(Stack):
         CREATE MODEL ml_delay_prediction
         FROM (SELECT * FROM ext_s3.consignment_train)
         TARGET probability
-        FUNCTION fnc_delay_probabilty
+        FUNCTION fnc_delay_probability
         IAM_ROLE default
         SETTINGS (
             MAX_RUNTIME 1800, --seconds
