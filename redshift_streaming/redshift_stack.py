@@ -7,21 +7,31 @@ from aws_cdk import (
     aws_iam as _iam,
     aws_redshift as _redshift,
     aws_secretsmanager as _sm,
+    custom_resources as _cr,
 )
 
 from constructs import Construct
 
+
 class RedshiftStack(Stack):
 
-    def __init__(self, scope: Construct, construct_id: str, ingestion_stack, **kwargs) -> None:
+    def __init__(self,
+                 scope: Construct,
+                 construct_id: str,
+                 consignment_stream,
+                 redshift_max_azs,
+                 redshift_cluster_type,
+                 redshift_number_of_nodes,
+                 redshift_db_name,
+                 redshift_master_username,
+                 redshift_node_type,
+                 **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-
-        redshift_config = self.node.try_get_context('redshift_config')
 
         vpc = _ec2.Vpc(
             self,
             "VpcId",
-            max_azs=redshift_config['max_azs']
+            max_azs=redshift_max_azs
         )
 
         # Create new security group to be used by redshift
@@ -92,11 +102,7 @@ class RedshiftStack(Stack):
             ]
         )
 
-        customer_stream = ingestion_stack.get_customer_stream
-        order_stream = ingestion_stack.get_order_stream
-
-        order_stream.grant_read_write(rs_cluster_role)
-        customer_stream.grant_read_write(rs_cluster_role)
+        consignment_stream.grant_read_write(rs_cluster_role)
 
         rs_cluster_subnet_group = _redshift.CfnClusterSubnetGroup(
             self,
@@ -107,21 +113,39 @@ class RedshiftStack(Stack):
             description="Redshift Subnet Group"
         )
 
-        self.rs_cluster = _redshift.CfnCluster(
+        rs_cluster = _redshift.CfnCluster(
             self,
             "redshiftStreamingCluster",
-            cluster_type=redshift_config['cluster_type'],
-            number_of_nodes=redshift_config['number_of_nodes'],
-            db_name=redshift_config['db_name'],
-            master_username=redshift_config['master_username'],
+            cluster_type=redshift_cluster_type,
+            number_of_nodes=redshift_number_of_nodes,
+            db_name=redshift_db_name,
+            master_username=redshift_master_username,
             master_user_password=rs_cluster_secret.secret_value.unsafe_unwrap(),
             iam_roles=[rs_cluster_role.role_arn],
-            node_type=redshift_config['node_type'],
+            node_type=redshift_node_type,
             publicly_accessible=False,
             cluster_subnet_group_name=rs_cluster_subnet_group.ref,
             vpc_security_group_ids=[
                 rs_security_group.security_group_id]
         )
+
+        aws_custom = _cr.AwsCustomResource(
+            self, "aws-custom",
+            on_create=_cr.AwsSdkCall(
+                service="Redshift",
+                action="modifyClusterIamRoles",
+                parameters={
+                    "ClusterIdentifier": rs_cluster.ref,
+                    "DefaultIamRoleArn": rs_cluster_role.role_arn
+                },
+                physical_resource_id=_cr.PhysicalResourceId.of("physicalResourceStateMachine")
+            ),
+            policy=_cr.AwsCustomResourcePolicy.from_sdk_calls(
+                resources=_cr.AwsCustomResourcePolicy.ANY_RESOURCE
+            )
+        )
+
+        self.rs_cluster = rs_cluster
 
         CfnOutput(
             self,
@@ -148,7 +172,3 @@ class RedshiftStack(Stack):
             ),
             description=f"Redshift Cluster IAM Role Arn"
         )
-
-    @property
-    def get_rs_cluster(self):
-        return self.rs_cluster

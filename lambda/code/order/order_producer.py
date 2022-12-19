@@ -86,14 +86,20 @@ def lambda_handler(event, context):
                 customer_state = customer_address.split(',')[-2]
                 order_address = fake.address()
                 order_state = customer_address.split(',')[-2]
-                profile_rec['delivery_address'] = customer_address
-                profile_rec['delivery_state'] = customer_state
+                profile_rec['consignment_date'] = now
+                profile_rec['destination_address'] = customer_address
+                profile_rec['destination_state'] = customer_state
+                profile_rec['destination_lat'] = random.uniform(-31.475, -37.643)
+                profile_rec['destination_long'] = random.uniform(141.224, 149.581)
                 profile_rec['origin_address'] = order_address
                 profile_rec['origin_state'] = order_state
+                profile_rec['origin_lat'] = random.uniform(-31.475, -37.643)
+                profile_rec['origin_long'] = random.uniform(141.224, 149.581)
                 profile_rec['userid'] = random.randint(0, cur_key)
                 profile_rec['timestamp'] = datetime.now().isoformat()
                 days_to_deliver = random.choice(range(2,7))
-                profile_rec['days_to_deliver'] = days_to_deliver
+                profile_rec['consignment_date'] = now + datetime.timedelta(days=days_to_deliver)
+                #profile_rec['days_to_deliver'] = days_to_deliver
                 mean_distance = 10 +  (days_to_deliver * 100)
                 profile_rec['delivery_distance'] = random.gauss(mean_distance, mean_distance/5)
                 profile_rec['revenue'] = random.gauss(mean_distance/6, mean_distance/18)
