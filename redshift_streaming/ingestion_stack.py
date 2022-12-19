@@ -3,6 +3,7 @@ from aws_cdk import (
     Duration,
     Stack,
     RemovalPolicy,
+    CfnOutput,
     aws_s3 as _s3,
     aws_s3_deployment as _s3_deploy,
     custom_resources as _cr,
@@ -170,3 +171,12 @@ class IngestionStack(Stack):
 
         self.consignment_stream = consignment_stream
         self.s3_bucket_raw = s3_bucket_raw
+
+        CfnOutput(
+            self,
+            "S3BucketOutput",
+            value=(
+                f"{s3_bucket_raw.bucket_name}"
+            ),
+            description=f"S3 Bucket"
+        )

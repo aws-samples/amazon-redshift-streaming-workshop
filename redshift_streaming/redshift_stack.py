@@ -19,6 +19,7 @@ class RedshiftStack(Stack):
                  scope: Construct,
                  construct_id: str,
                  consignment_stream,
+                 s3_bucket_raw,
                  redshift_max_azs,
                  redshift_cluster_type,
                  redshift_number_of_nodes,
@@ -31,7 +32,7 @@ class RedshiftStack(Stack):
         vpc = _ec2.Vpc(
             self,
             "VpcId",
-            max_azs=redshift_max_azs
+            max_azs=redshift_max_azs,
         )
 
         # Create new security group to be used by redshift
@@ -43,14 +44,18 @@ class RedshiftStack(Stack):
 
         rs_cluster_role = _iam.Role(
             self, "redshiftClusterRole",
-            assumed_by=_iam.ServicePrincipal(
-                "redshift.amazonaws.com"),
+            assumed_by=_iam.CompositePrincipal(
+                _iam.ServicePrincipal("redshift.amazonaws.com"),
+                _iam.ServicePrincipal("sagemaker.amazonaws.com")),
             managed_policies=[
                 _iam.ManagedPolicy.from_aws_managed_policy_name(
-                    "AmazonS3FullAccess"
+                    "AmazonRedshiftAllCommandsFullAccess"
                 ),
                 _iam.ManagedPolicy.from_aws_managed_policy_name(
-                    "AmazonRedshiftAllCommandsFullAccess"
+                    "SecretsManagerReadWrite"
+                ),
+                _iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "AmazonSageMakerFullAccess"
                 )
             ]
         )
@@ -103,6 +108,7 @@ class RedshiftStack(Stack):
         )
 
         consignment_stream.grant_read_write(rs_cluster_role)
+        s3_bucket_raw.grant_read_write(rs_cluster_role)
 
         rs_cluster_subnet_group = _redshift.CfnClusterSubnetGroup(
             self,
@@ -129,7 +135,7 @@ class RedshiftStack(Stack):
                 rs_security_group.security_group_id]
         )
 
-        aws_custom = _cr.AwsCustomResource(
+        aws_custom_default_iam = _cr.AwsCustomResource(
             self, "aws-custom",
             on_create=_cr.AwsSdkCall(
                 service="Redshift",
@@ -145,7 +151,58 @@ class RedshiftStack(Stack):
             )
         )
 
+        sql = f'''
+        CREATE EXTERNAL SCHEMA IF NOT EXISTS ext_s3
+        FROM DATA CATALOG
+        DATABASE 'ext_s3'
+        IAM_ROLE default;
+
+        CREATE MODEL ml_delay_prediction
+        FROM (SELECT * FROM ext_s3.consignment_train)
+        TARGET probability
+        FUNCTION fnc_delay_probabilty
+        IAM_ROLE default
+        SETTINGS (
+            MAX_RUNTIME 1800, --seconds
+            S3_BUCKET '{s3_bucket_raw.bucket_name}' 
+        )
+        '''
+
+        aws_custom_create_model = _cr.AwsCustomResource(
+            self, "aws-custom-redshift-ml",
+            on_create=_cr.AwsSdkCall(
+                service="RedshiftData",
+                action="executeStatement",
+                parameters={
+                    "ClusterIdentifier": rs_cluster.ref,
+                    "Database": rs_cluster.db_name,
+                    "DbUser": rs_cluster.master_username,
+                    "Sql": sql,
+                    "StatementName": "CreateRedshiftMLModel",
+                    "WithEvent": True
+                },
+                physical_resource_id=_cr.PhysicalResourceId.of("physicalResourceStateMachine")
+            ),
+            policy=_cr.AwsCustomResourcePolicy.from_statements(
+                statements=[_iam.PolicyStatement(
+                    effect=_iam.Effect.ALLOW,
+                    actions=[
+                        "redshift:GetClusterCredentials",
+                        "redshift-serverless:GetCredentials",
+                        "redshift-data:ExecuteStatement",
+                    ],
+                    resources=["*"]
+                )]
+            )
+            
+        )
+
+        aws_custom_create_model.node.add_dependency(aws_custom_default_iam)
+
         self.rs_cluster = rs_cluster
+        self.rs_security_group = rs_security_group
+        self.rs_cluster_role = rs_cluster_role
+        self.vpc = vpc
 
         CfnOutput(
             self,
