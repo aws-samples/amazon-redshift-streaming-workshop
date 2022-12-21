@@ -1,6 +1,7 @@
 from aws_cdk import (
     Stack,
     CfnOutput,
+    CfnTag,
     RemovalPolicy,
     Aws,
     aws_ec2 as _ec2,
@@ -132,7 +133,11 @@ class RedshiftStack(Stack):
             publicly_accessible=False,
             cluster_subnet_group_name=rs_cluster_subnet_group.ref,
             vpc_security_group_ids=[
-                rs_security_group.security_group_id]
+                rs_security_group.security_group_id],
+            tags=[CfnTag(
+                key="GrafanaDataSource",
+                value=" "
+            )],
         )
 
         aws_custom_default_iam = _cr.AwsCustomResource(
@@ -165,7 +170,16 @@ class RedshiftStack(Stack):
         SETTINGS (
             MAX_RUNTIME 1800, --seconds
             S3_BUCKET '{s3_bucket_raw.bucket_name}' 
-        )
+        );
+
+        CREATE MATERIALIZED VIEW fleet_summary AS
+        SELECT vehicle_location, 
+        COUNT(CASE WHEN vehicle_status = 'On the move' THEN 1 END) on_the_move, 
+        COUNT(CASE WHEN vehicle_status = 'Scheduled maintenance' THEN 1 END) scheduled_maintenance,
+        COUNT(CASE WHEN vehicle_status = 'Unscheduled maintenance' THEN 1 END) unscheduled_maintenance
+        FROM ext_s3.fleet
+        GROUP BY 1
+        ;
         '''
 
         aws_custom_create_model = _cr.AwsCustomResource(

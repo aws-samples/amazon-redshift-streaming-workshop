@@ -21,7 +21,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 3,
+  "id": 2,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -39,9 +39,6 @@
       "type": "row"
     },
     {
-      "datasource": {
-        "uid": "Redshift Streaming"
-      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -139,7 +136,7 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 17,
+        "w": 18,
         "x": 3,
         "y": 1
       },
@@ -162,27 +159,48 @@
       "pluginVersion": "8.4.7",
       "targets": [
         {
-          "rawSQL": "select \nsum(revenue) as \" \" from order_stream\nwhere $__timeFilter(ApproximateArrivalTimestamp)",
-          "refId": "Revenue"
+          "datasource": {
+            "type": "grafana-redshift-datasource",
+            "uid": "huHW4rc4z"
+          },
+          "rawSQL": "select \nsum(revenue) as \" \" from consignment_predictions\nwhere $__timeFilter(consignment_date)",
+          "refId": "Revenue",
+          "schema": "public"
         },
         {
+          "datasource": {
+            "type": "grafana-redshift-datasource",
+            "uid": "huHW4rc4z"
+          },
           "hide": false,
-          "rawSQL": "select sum(cost) as \" \" from order_stream\nwhere $__timeFilter(ApproximateArrivalTimestamp)",
+          "rawSQL": "select sum(cost) as \" \" from consignment_predictions\nwhere $__timeFilter(consignment_date)",
           "refId": "Cost"
         },
         {
+          "datasource": {
+            "type": "grafana-redshift-datasource",
+            "uid": "huHW4rc4z"
+          },
           "hide": false,
-          "rawSQL": "select sum(revenue - cost) as \" \" from order_stream\nwhere $__timeFilter(ApproximateArrivalTimestamp)",
+          "rawSQL": "select sum(revenue - cost) as \" \" from consignment_predictions\nwhere $__timeFilter(consignment_date)",
           "refId": "Profit"
         },
         {
+          "datasource": {
+            "type": "grafana-redshift-datasource",
+            "uid": "huHW4rc4z"
+          },
           "hide": false,
-          "rawSQL": "select avg(days_to_deliver) as \" \" from order_stream\nwhere $__timeFilter(ApproximateArrivalTimestamp)",
+          "rawSQL": "select avg(days_to_deliver) as \" \" from consignment_predictions\nwhere $__timeFilter(consignment_date)",
           "refId": "Average Delivery Days"
         },
         {
+          "datasource": {
+            "type": "grafana-redshift-datasource",
+            "uid": "huHW4rc4z"
+          },
           "hide": false,
-          "rawSQL": "select count(1) as \" \" from order_stream\nwhere $__timeFilter(ApproximateArrivalTimestamp)",
+          "rawSQL": "select count(1) as \" \" from consignment_predictions\nwhere $__timeFilter(consignment_date)",
           "refId": "Number of Consignments"
         }
       ],
@@ -190,9 +208,6 @@
       "type": "stat"
     },
     {
-      "datasource": {
-        "uid": "Redshift Streaming"
-      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -293,8 +308,8 @@
         ]
       },
       "gridPos": {
-        "h": 9,
-        "w": 13,
+        "h": 10,
+        "w": 12,
         "x": 0,
         "y": 4
       },
@@ -317,17 +332,30 @@
       "pluginVersion": "8.2.5",
       "targets": [
         {
+          "datasource": {
+            "type": "grafana-redshift-datasource",
+            "uid": "huHW4rc4z"
+          },
           "hide": false,
-          "rawSQL": "select $__timeGroup(approximatearrivaltimestamp, $__interval),\ncount(case when delay_probability = 'HIGH' THEN 1 END) as \" \"\nfrom order_stream\ngroup by 1\norder by 1",
-          "refId": "High Probability"
+          "rawSQL": "select $__timeGroup(consignment_date, $__interval),\ncount(case when delay_probability = 'HIGH' THEN 1 END) as \" \"\nfrom consignment_predictions\ngroup by 1\norder by 1",
+          "refId": "High Probability",
+          "schema": "public"
         },
         {
+          "datasource": {
+            "type": "grafana-redshift-datasource",
+            "uid": "huHW4rc4z"
+          },
           "hide": false,
-          "rawSQL": "select $__timeGroup(approximatearrivaltimestamp, $__interval),\ncount(case when delay_probability = 'MEDIUM' THEN 1 END) as \" \"\nfrom order_stream\ngroup by 1\norder by 1",
+          "rawSQL": "select $__timeGroup(consignment_date, $__interval),\ncount(case when delay_probability = 'MEDIUM' THEN 1 END) as \" \"\nfrom consignment_predictions\ngroup by 1\norder by 1",
           "refId": "Medium Probability"
         },
         {
-          "rawSQL": "select $__timeGroup(approximatearrivaltimestamp, $__interval),\ncount(case when delay_probability = 'LOW' THEN 1 END) as \" \"\nfrom order_stream\ngroup by 1\norder by 1",
+          "datasource": {
+            "type": "grafana-redshift-datasource",
+            "uid": "huHW4rc4z"
+          },
+          "rawSQL": "select $__timeGroup(consignment_date, $__interval),\ncount(case when delay_probability = 'LOW' THEN 1 END) as \" \"\nfrom consignment_predictions\ngroup by 1\norder by 1",
           "refId": "Low Probability"
         }
       ],
@@ -336,29 +364,15 @@
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "uid": "Redshift Streaming"
-      },
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "continuous-RdYlGr"
+            "mode": "thresholds"
           },
           "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "axisSoftMin": 0,
-            "fillOpacity": 44,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            }
+            "align": "auto",
+            "displayMode": "auto",
+            "filterable": false
           },
           "mappings": [],
           "thresholds": {
@@ -375,50 +389,195 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "vehicle_location"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fleet Location"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "on_the_move"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "On the Move"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "scheduled_maintenance"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Scheduled Maintenance"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unscheduled_maintenance"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Unscheduled Maintenance"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "on_the_move"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "basic"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "percentage",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 70
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "scheduled_maintenance"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "basic"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "percentage",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 10
+                    },
+                    {
+                      "color": "red",
+                      "value": 20
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unscheduled_maintenance"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "basic"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "percentage",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 5
+                    },
+                    {
+                      "color": "red",
+                      "value": 10
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Fleet Location"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 115
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
-        "h": 9,
-        "w": 11,
-        "x": 13,
+        "h": 10,
+        "w": 12,
+        "x": 12,
         "y": 4
       },
-      "id": 10,
+      "id": 12,
       "options": {
-        "barRadius": 0,
-        "barWidth": 0.6,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
         },
-        "orientation": "horizontal",
-        "showValue": "auto",
-        "stacking": "normal",
-        "text": {},
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        },
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 0
+        "showHeader": true,
+        "sortBy": []
       },
-      "pluginVersion": "8.2.5",
+      "pluginVersion": "8.4.7",
       "targets": [
         {
-          "rawSQL": "select delivery_state as \"Destination\",  \ncount (case when delay_probability = 'HIGH' then 1 end) as \"high delay\",\ncount(1) as \"Total consignment count\"\nfrom order_stream\nwhere $__timeFilter(ApproximateArrivalTimestamp)\ngroup by delivery_state \norder by delivery_state",
-          "refId": "A"
+          "datasource": {
+            "type": "grafana-redshift-datasource",
+            "uid": "huHW4rc4z"
+          },
+          "rawSQL": "SELECT * FROM fleet_summary ",
+          "refId": "A",
+          "schema": "public"
         }
       ],
-      "title": "Consignment by State",
-      "transparent": true,
-      "type": "barchart"
+      "title": "Fleet Status",
+      "type": "table"
     },
     {
-      "datasource": {
-        "uid": "Redshift Streaming"
-      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -586,7 +745,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 104
+                "value": 78
               }
             ]
           },
@@ -598,17 +757,113 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 117
+                "value": 109
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "consignment_id"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 98
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "consignment_id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "ID"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Distance"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "days_to_deliver"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Days to Deliver"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Revenue"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Days to Deliver"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 128
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Delay Probability"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 141
               }
             ]
           }
         ]
       },
       "gridPos": {
-        "h": 9,
-        "w": 24,
+        "h": 11,
+        "w": 15,
         "x": 0,
-        "y": 13
+        "y": 14
       },
       "id": 8,
       "options": {
@@ -620,22 +875,102 @@
           "show": false
         },
         "showHeader": true,
-        "sortBy": [
-          {
-            "desc": true,
-            "displayName": "ID"
-          }
-        ]
+        "sortBy": []
       },
       "pluginVersion": "8.4.7",
       "targets": [
         {
-          "rawSQL": "select top 100 consignmentid, origin_state as \"Origin\", delivery_state as \"Destination\", delay_probability, delivery_distance, revenue, cost from order_stream\nwhere $__timeFilter(ApproximateArrivalTimestamp)\norder by ApproximateArrivalTimestamp desc",
+          "datasource": {
+            "type": "grafana-redshift-datasource",
+            "uid": "huHW4rc4z"
+          },
+          "rawSQL": "select top 100 consignment_id, origin_state as \"Origin\", destination_state as \"Destination\", delay_probability, delivery_distance, days_to_deliver, revenue, cost from consignment_predictions\nwhere $__timeFilter(consignment_date)\norder by consignment_date desc",
           "refId": "A"
         }
       ],
       "title": "Recent Transactions",
       "type": "table"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-RdYlGr"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "fillOpacity": 44,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 9,
+        "x": 15,
+        "y": 14
+      },
+      "id": 10,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.6,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "stacking": "normal",
+        "text": {},
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "8.2.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-redshift-datasource",
+            "uid": "huHW4rc4z"
+          },
+          "rawSQL": "select destination_state as \"Destination\",  \ncount (case when delay_probability = 'HIGH' then 1 end) as \"high delay\",\ncount(1) as \"Total consignment count\"\nfrom consignment_predictions\nwhere $__timeFilter(consignment_date)\ngroup by destination_state \norder by destination_state",
+          "refId": "A"
+        }
+      ],
+      "title": "Consignment by State",
+      "transparent": true,
+      "type": "barchart"
     }
   ],
   "refresh": "5s",
@@ -655,6 +990,6 @@
   "timezone": "",
   "title": "Logistics Dashboard",
   "uid": "oE82Z2Bnk",
-  "version": 2,
+  "version": 5,
   "weekStart": ""
 }

@@ -75,7 +75,6 @@ class IngestionStack(Stack):
                 "STREAM_NAME": f"{consignment_stream.stream_name}"
             },
             timeout=Duration.seconds(60),
-            reserved_concurrent_executions=1,
         )
 
         consignment_stream.grant_read_write(order_lambda)

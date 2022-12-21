@@ -4,6 +4,7 @@ import aws_cdk as cdk
 from redshift_streaming.ingestion_stack import IngestionStack
 from redshift_streaming.redshift_stack import RedshiftStack
 from redshift_streaming.stepfunction_stack import StepFunctionStack
+from redshift_streaming.grafana_stack import GrafanaStack
 
 import constants
 

@@ -43,8 +43,9 @@ class StepFunctionStack(Stack):
             reserved_concurrent_executions=1,
         )
 
-        sql = '''REFRESH MATERIALIZED VIEW customer_stream;
-            REFRESH MATERIALIZED VIEW order_stream;'''
+        sql = '''REFRESH MATERIALIZED VIEW consignment_stream;
+        REFRESH MATERIALIZED VIEW consignment_transformed;
+        REFRESH MATERIALIZED VIEW consignment_predictions;'''
 
         sfn_execute_statement = _sfn_tasks.CallAwsService(
             self, 'Submit',
