@@ -45,7 +45,18 @@ class StepFunctionStack(Stack):
 
         sql = '''REFRESH MATERIALIZED VIEW consignment_stream;
         REFRESH MATERIALIZED VIEW consignment_transformed;
-        REFRESH MATERIALIZED VIEW consignment_predictions;'''
+        INSERT INTO consignment_predictions
+        WITH consignment_delta as (
+            SELECT ct.*
+            FROM consignment_transformed ct
+            LEFT JOIN consignment_predictions cp 
+            ON ct.consignment_id = cp.consignment_id 
+            WHERE cp.consignment_id IS NULL
+        )
+        SELECT *, fnc_delay_probability(
+        day_of_week, "hour", days_to_deliver, delivery_distance) delay_probability
+        FROM consignment_delta;
+        '''
 
         sfn_execute_statement = _sfn_tasks.CallAwsService(
             self, 'Submit',
