@@ -3,159 +3,79 @@
 
 Most organisations today agree that data is one of their most important asset and that the ability to act on timely data, sets data-driven organisations apart from their peers. However getting access to real-time data used to require significant investment in terms of acquiring new software or in hiring specialised engineering teams. The new Amazon Redshift streaming ingestion feature aims to democratise streaming analytics with its low-cost and minimal technical skill requirements as it is primarily defined using SQL.
 
-In this workshop, we will show how easy it is to build a streaming analytics application using this new feature. We will create a near-real time logistics dashboard using Amazon Managed Grafana to provide augmented intelligence and situational awareness for the logistics operations team. It connects to a Redshift cluster which uses Redshift streaming to analyse data from a Kinesis data stream. 
+In this workshop, we will build a near-realtime logistics dashboard using [Amazon Redshift](https://aws.amazon.com/redshift/)  and [Amazon Managed Grafana](https://aws.amazon.com/grafana/). Our example will be an operational dashboard for a logistics company that provides situational awareness and augmented intelligence for their operations team. From this dashboard, the team can see the current state of their consignments and their logistics fleet based on events that happened only a few seconds ago. It also shows the consignment delay predictions of a Redshift ML model that helps then proactively respond to disruptions before it even happens.
 
-![image-20220601123345968](./images/image-20220601123345968.png)
+![dashboard](./images/dashboard.png)
+
+
+**Solution Overview**
+
+This solution is composed of the following components and the provisioning of resources will be automated using the [AWS Cloud Development Kit (AWS CDK)](https://aws.amazon.com/cdk/):
+
+- Multiple streaming data sources are simulated through Python code running in our serverless compute service, [AWS Lambda](https://aws.amazon.com/lambda/).
+
+- The streaming events are captured by [Amazon Kinesis Data Stream](https://aws.amazon.com/kinesis/data-streams/) which is a highly scalable serverless streaming data service. 
+
+- We will then use the Amazon Redshift streaming feature to process and store the streaming data and Redshift ML to predict the likelihood of a consignment getting delayed.
+
+- [AWS Step Functions](https://aws.amazon.com/step-functions) will be used for serverless workflow orchestration.
+
+- Followed by a consumption layer built on Amazon Managed Grafana where we can visualise the insights and even generate alerts through [Amazon Simple Notification Service (SNS)](https://aws.amazon.com/sns/) for our operations team. 
+
 
 
 
 ### Infrastructure Provisioning using CDK and Cloudshell
 
-The AWS Cloud Development Kit (AWS CDK) is an open-source project that allows you to define your cloud infrastructure using familiar programming languages. In this workshop, we are using python to define the cloud infrastructure as it is one of the most commonly used programming languages used by analytics professionals.
+The AWS Cloud Development Kit (AWS CDK) is an open-source project that allows you to define your cloud infrastructure using familiar programming languages. It leverages high level constructs to represent AWS components to simplify the build process. In this blog, we used Python to define the cloud infrastructure due to its familiarity to many data and analytics professionals.
 
-Note: This workshop will work for any AWS region where AWS Cloudshell is available. However the workshop's instructions will be using the us-east-1 region (This can also be deployed in regions without Cloudshell but will require additional steps to provision an EC2 Linux deployment instance.) 
+The project has the following prerequisites:
 
-Note: In order for you to run this code you will need elevated privileges into the AWS account you are using.
+- An [AWS account](https://console.aws.amazon.com/console/home)
 
-Login to the AWS Console.
+- Amazon Linux 2 with [AWS CDK](https://aws.amazon.com/getting-started/guides/setup-cdk/module-two/), [Docker CLI](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html) and Python3 installed. Alternatively, setting up an [AWS Cloud9 environment](https://docs.aws.amazon.com/cloud9/latest/user-guide/create-environment-main.html) will satisfy this requirement.
 
-https://us-east-1.console.aws.amazon.com/console/home
+- Note: In order for you to run this code you will need elevated privileges into the AWS account you are using.
 
-Open Cloudshell
+Clone Github repository and install python dependencies.
 
-https://us-east-1.console.aws.amazon.com/cloudshell/home?region=us-east-1
+```bash
+git clone https://github.com/aws-samples/amazon-redshift-streaming-workshop --branch blog
 
-Upgrade CDK to the latest version
-
-```
-sudo npm install -g aws-cdk@latest
-```
-
-Clone this git repository
-
-```
-git clone https://github.com/aws-samples/amazon-redshift-streaming-workshop
-```
-
-Go to the working directory:
-
-```
 cd amazon-redshift-streaming-workshop
-```
-
-Create a virtualenv:
-
-```
 python3 -m venv .venv
-```
-
-After the init process completes and the virtualenv is created, you can use the following
-step to activate your virtualenv.
-
-```
 source .venv/bin/activate
-```
-
-
-Once the virtualenv is activated, you can install the required dependencies.
-
-```
 pip install -r requirements.txt
 ```
 
-Bootstrap CDK. This will set-up the resources required by CDK to deploy into this AWS account. (This step is only required if you have not used CDK before in this account and region)
+Bootstrap CDK. This will set-up the resources required by CDK to deploy into the AWS account. This step is only required if you have not used CDK in the deployment account and region
 
-```shell
+```bash
 cdk bootstrap
 ```
 
-![image-20220601093700045](./images/image-20220601093700045.png)
+Deploy all stacks. The entire deployment time will take 10-15 minutes.
 
-Deploy all stacks and disable prompting. The entire deployment time will take 10-15 minutes.
-
+```bash
+cdk deploy IngestionStack
+cdk deploy RedshiftStack
+cdk deploy StepFunctionStack
 ```
-cdk deploy --all --require-approval never
-```
-
-Note: There are costs associated with provisioning resources in AWS. You can change the size of the Redshift cluster by updating the contents of app.py in the project working directory.
-
-![image-20220601154014056](./images/image-20220601154014056.png)
-
-#### Post-deployment Redshift configuration
-
-At the moment setting up a default IAM role for the Redshift cluster could not be configured automatically using CloudFormation. The following are the steps to define a default IAM role.
-
-Go to the Redshift console
-
-https://us-east-1.console.aws.amazon.com/redshiftv2/home?region=us-east-1#dashboard
-
-Select the cluster that we provisioned, **redshiftstreamingcluster-xxxxxxxxx**
-
-![image-20220530163446112](./images/image-20220530163446112.png)
-
-
-
-Go to the **Properties** tab:
-
-![image-20220530163556753](./images/image-20220530163556753.png)
-
-
-
-Scroll down to **Cluster permissions**. Select the IAM role that we provisioned and **make this the default IAM** role through the drop down menu.
-
-![image-20220530163644113](./images/image-20220530163644113.png)
-
-We also need to add a tag that is used by the IAM integration between Amazon Redshift and Amazon Managed Grafana.
-
-Scroll down to **Tags** and click on **Add tags**.
-
-<img src="./images/image-20220601121023062.png" alt="image-20220601121023062" style="zoom:40%;" />
-
-Specify **GrafanaDataSource** as a Key and click **Save changes**. 
-
-<img src="./images/image-20220601121120524.png" alt="image-20220601121120524" style="zoom:40%;" />
-
-Note: **If you get disconnected from Cloudshell** please follow the following steps. New Cloudshell sessions always start in the home directory and the python virtual environment will be deactivated.
-
-Go to working directory
-
-```
-cd amazon-redshift-streaming-workshop
-```
-
-Activate python virtual environment
-
-```
-source .venv/bin/activate
-```
-
-Continue from where you left off.
-
-**(Optional step)**
-
-You can also check the status of deployment in Cloudformation.
-
-https://us-east-1.console.aws.amazon.com/cloudformation/home
-
-![image-20220530153120427](./images/image-20220530153120427.png)
-
 
 
 ### Connecting to the Redshift Cluster 
 
-Note: This section is not compatible with accounts created using AWS Event Engine. (due to Query Editor v2 restrictions)
-
 Login to the Redshift Query Editor v2 and connect to the redshift cluster using the drop down arrow next to the cluster name.
 
-https://us-east-1.console.aws.amazon.com/sqlworkbench/home
+https://console.aws.amazon.com/sqlworkbench/home
 
 ![image-20220601100354395](./images/image-20220601100354395.png)
 
 Specify cluster credentials. Select **Temporary credentials** as the authentication mechanism.
 
-Database: **streaming_db**
+Database: **dev**
 
-User name: **admin**
+User name: **rsstream_user**
 
 Click **Create connection**
 
