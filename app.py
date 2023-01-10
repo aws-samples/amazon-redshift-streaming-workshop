@@ -22,6 +22,4 @@ MasterStack(app,  "MasterStack", env=env)
 # ingestion_stack = IngestionStack(app,  "IngestionStack", env=env, redshift_stack=redshift_stack)
 # #add ec2 in redshift stack
 # sagemaker_stack = SagemakerStack(app, "SagemakerStack", env=env)
-
-
 app.synth()

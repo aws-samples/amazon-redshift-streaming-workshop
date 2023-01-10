@@ -32,8 +32,8 @@ context_constants = {
         "nat_gateways": 1,
         "redshift_vpc_cidr": "10.1.0.0/16",
         "subnet_cidr_mask": 24,
-        "namespace_name": "default",
-        "workgroup_name": "default",
+        "namespace_name": "default1",
+        "workgroup_name": "default1",
         "security_group_name": "default",
         "base_capacity": 32,
         "db_name": "dev",
@@ -49,7 +49,7 @@ context_constants = {
         "content": base64.b64encode(startup_script.encode('utf-8')).decode("utf-8"),
         "platform_identifier": "notebook-al2-v2",
         "lifecycle_config_name": "pip-dependencies",
-        "instance_type": "ml.t3.large",
+        "instance_type": "ml.r5.large",
         "notebook_instance_name": "redshift-sagemaker",
     }
 }

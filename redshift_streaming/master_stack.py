@@ -3,6 +3,7 @@ from aws_cdk import (
     Duration,
     Stack,
     RemovalPolicy,
+    aws_cloud9 as _c9,
     aws_iam as _iam,
     aws_lambda as _lambda,
     aws_dynamodb as _dynamodb,
@@ -15,7 +16,8 @@ from aws_cdk import (
     aws_events_targets as _events_targets,
     aws_s3_deployment as _s3_deploy,
     aws_kinesis as _kinesis,
-    aws_redshiftserverless as rs,
+    aws_redshiftserverless as _rss,
+    aws_redshift as _rs,
     aws_s3 as _s3,
     aws_rds as _rds,
     aws_secretsmanager as _sm,
@@ -37,52 +39,6 @@ class MasterStack(Stack):
         kinesis_config = self.node.try_get_context(f'{environment}_kinesis_config')
         redshift_config = self.node.try_get_context(f'{environment}_redshift_config')
         sagemaker_config = self.node.try_get_context(f'{environment}_sagemaker_config')
-
-        rs_role = _iam.Role(
-            self, "redshiftClusterRole",
-            assumed_by=_iam.ServicePrincipal(
-                "redshift.amazonaws.com"),
-            managed_policies=[
-                _iam.ManagedPolicy.from_aws_managed_policy_name(
-                    "AmazonRedshiftAllCommandsFullAccess"
-                )
-            ]
-        )
-
-        _iam.ManagedPolicy(
-            self,
-            "spectrum_lake_formation_policy",
-            description="Provide access between Redshift Spectrum and Lake Formation",
-            statements=[
-                _iam.PolicyStatement(
-                    effect=_iam.Effect.ALLOW,
-                    actions=[
-                        "glue:CreateDatabase",
-                        "glue:DeleteDatabase",
-                        "glue:GetDatabase",
-                        "glue:GetDatabases",
-                        "glue:UpdateDatabase",
-                        "glue:CreateTable",
-                        "glue:DeleteTable",
-                        "glue:BatchDeleteTable",
-                        "glue:UpdateTable",
-                        "glue:GetTable",
-                        "glue:GetTables",
-                        "glue:BatchCreatePartition",
-                        "glue:CreatePartition",
-                        "glue:DeletePartition",
-                        "glue:BatchDeletePartition",
-                        "glue:UpdatePartition",
-                        "glue:GetPartition",
-                        "glue:GetPartitions",
-                        "glue:BatchGetPartition",
-                        "lakeformation:GetDataAccess",
-                    ],
-                    resources=["*"],
-                )
-            ],
-            roles=[rs_role],
-        )
 
         vpc = _ec2.Vpc.from_lookup(
             self,
@@ -205,28 +161,113 @@ class MasterStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
         )
 
-
-
-        rs_namespace = rs.CfnNamespace(
-            self,
-            "redshiftServerlessNamespace",
-            namespace_name=redshift_config['namespace_name'],
-            db_name=redshift_config['db_name'],
-            default_iam_role_arn=rs_role.role_arn,
-            iam_roles=[rs_role.role_arn],
-            admin_username=redshift_config['admin_username'],
-            admin_user_password=redshift_password.secret_value.unsafe_unwrap(),
+        rs_role = _iam.Role(
+            self, "redshiftClusterRole",
+            assumed_by=_iam.ServicePrincipal(
+                "redshift.amazonaws.com"),
+            managed_policies=[
+                _iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "AmazonRedshiftAllCommandsFullAccess"
+                )
+            ]
         )
 
-        rs_workgroup = rs.CfnWorkgroup(
+        _iam.ManagedPolicy(
             self,
-            "redshiftServerlessWorkgroup",
-            workgroup_name=redshift_config['workgroup_name'],
-            base_capacity=32,
-            publicly_accessible=True,
-            namespace_name=rs_namespace.ref,
-            security_group_ids=[rs_security_group.security_group_id],
+            "spectrum_lake_formation_policy",
+            description="Provide access between Redshift Spectrum and Lake Formation",
+            statements=[
+                _iam.PolicyStatement(
+                    effect=_iam.Effect.ALLOW,
+                    actions=[
+                        "glue:CreateDatabase",
+                        "glue:DeleteDatabase",
+                        "glue:GetDatabase",
+                        "glue:GetDatabases",
+                        "glue:UpdateDatabase",
+                        "glue:CreateTable",
+                        "glue:DeleteTable",
+                        "glue:BatchDeleteTable",
+                        "glue:UpdateTable",
+                        "glue:GetTable",
+                        "glue:GetTables",
+                        "glue:BatchCreatePartition",
+                        "glue:CreatePartition",
+                        "glue:DeletePartition",
+                        "glue:BatchDeletePartition",
+                        "glue:UpdatePartition",
+                        "glue:GetPartition",
+                        "glue:GetPartitions",
+                        "glue:BatchGetPartition",
+                        "lakeformation:GetDataAccess",
+                    ],
+                    resources=["*"],
+                )
+            ],
+            roles=[rs_role],
         )
+
+        # rs_namespace = _rss.CfnNamespace(
+        #     self,
+        #     "redshiftServerlessNamespace",
+        #     namespace_name=redshift_config['namespace_name'],
+        #     db_name=redshift_config['db_name'],
+        #     default_iam_role_arn=rs_role.role_arn,
+        #     iam_roles=[rs_role.role_arn],
+        #     admin_username=redshift_config['admin_username'],
+        #     admin_user_password=redshift_password.secret_value.unsafe_unwrap(),
+        # )
+
+        # rs_workgroup = _rss.CfnWorkgroup(
+        #     self,
+        #     "redshiftServerlessWorkgroup",
+        #     workgroup_name=redshift_config['workgroup_name'],
+        #     base_capacity=32,
+        #     publicly_accessible=True,
+        #     namespace_name=rs_namespace.ref,
+        #     security_group_ids=[rs_security_group.security_group_id],
+        # )
+
+        # rs_cluster_subnet_group = _rs.CfnClusterSubnetGroup(
+        #     self,
+        #     "redshiftSubnetGroup",
+        #     subnet_ids=vpc.select_subnets(
+        #         subnet_type=_ec2.SubnetType.PUBLIC
+        #     ).subnet_ids,
+        #     description="Redshift Subnet Group"
+        # )
+
+        # rs_cluster = _rs.CfnCluster(
+        #     self,
+        #     "redshiftCluster",
+        #     cluster_type=redshift_config['cluster_type'],
+        #     number_of_nodes=redshift_config['number_of_nodes'],
+        #     db_name=redshift_config['db_name'],
+        #     master_username=redshift_config['admin_username'],
+        #     master_user_password=redshift_password.secret_value.unsafe_unwrap(),
+        #     iam_roles=[rs_role.role_arn],
+        #     node_type=redshift_config['node_type'],
+        #     publicly_accessible=False,
+        #     cluster_subnet_group_name=rs_cluster_subnet_group.ref,
+        #     vpc_security_group_ids=[
+        #         rs_security_group.security_group_id],
+        # )
+
+        # aws_custom_default_iam = _cr.AwsCustomResource(
+        #     self, "aws-custom-default-iam",
+        #     on_create=_cr.AwsSdkCall(
+        #         service="Redshift",
+        #         action="modifyClusterIamRoles",
+        #         parameters={
+        #             "ClusterIdentifier": rs_cluster.ref,
+        #             "DefaultIamRoleArn": rs_role.role_arn
+        #         },
+        #         physical_resource_id=_cr.PhysicalResourceId.of("physicalResourceStateMachine")
+        #     ),
+        #     policy=_cr.AwsCustomResourcePolicy.from_sdk_calls(
+        #         resources=_cr.AwsCustomResourcePolicy.ANY_RESOURCE
+        #     )
+        # )
 
         cfn_notebook_instance_lifecycle_config = _sg.CfnNotebookInstanceLifecycleConfig(
             self, 
@@ -247,7 +288,7 @@ class MasterStack(Stack):
             security_group_ids=[sg_security_group.security_group_id],
             subnet_id=vpc.select_subnets(
                 subnet_type=_ec2.SubnetType.PUBLIC
-            ).subnet_ids[1]
+            ).subnet_ids[0]
         )
 
         s3_bucket_raw = _s3.Bucket(
@@ -455,4 +496,15 @@ class MasterStack(Stack):
             secrets=[rds_cluster.secret],
             security_groups=[pg_security_group],
             vpc=vpc
+        )
+
+        cfn_environment_eC2 = _c9.CfnEnvironmentEC2(
+            self, 
+            "MyCfnEnvironmentEC2",
+            instance_type="t3.large",
+            connection_type="CONNECT_SSM",
+            image_id="amazonlinux-2-x86_64",
+            subnet_id=vpc.select_subnets(
+                subnet_type=_ec2.SubnetType.PUBLIC
+            ).subnet_ids[0]
         )
