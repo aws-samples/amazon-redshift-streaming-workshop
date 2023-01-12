@@ -14,13 +14,19 @@ from constructs import Construct
 
 class StepFunctionStack(Stack):
 
-    def __init__(self, scope: Construct, construct_id: str, redshift_stack, **kwargs) -> None:
+    def __init__(self,
+                 scope: Construct,
+                 construct_id: str,
+                 rs_cluster,
+                 **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         lambdaLayer = _lambda.LayerVersion(self, 'lambda-layer',
-                  code = _lambda.AssetCode('lambda/layer/'),
-                  compatible_runtimes = [_lambda.Runtime.PYTHON_3_8],
-        )
+                                           code=_lambda.AssetCode(
+                                               'lambda/layer/'),
+                                           compatible_runtimes=[
+                                               _lambda.Runtime.PYTHON_3_8],
+                                           )
 
         timer_lambda_function = _lambda.Function(
             self, 'step-function-timer-lambda',
@@ -29,7 +35,7 @@ class StepFunctionStack(Stack):
             description='Lambda function deployed using AWS CDK Python',
             code=_lambda.AssetCode('./lambda/code/stepfunction_timer'),
             handler='timer.lambda_handler',
-            layers = [lambdaLayer],
+            layers=[lambdaLayer],
             environment={
                 "LOG_LEVEL": "INFO"
             },
@@ -37,10 +43,20 @@ class StepFunctionStack(Stack):
             reserved_concurrent_executions=1,
         )
 
-        rs_cluster = redshift_stack.get_rs_cluster
-
-        sql = '''REFRESH MATERIALIZED VIEW customer_stream;
-            REFRESH MATERIALIZED VIEW order_stream;'''
+        sql = '''REFRESH MATERIALIZED VIEW consignment_stream;
+        REFRESH MATERIALIZED VIEW consignment_transformed;
+        INSERT INTO consignment_predictions
+        WITH consignment_delta as (
+            SELECT ct.*
+            FROM consignment_transformed ct
+            LEFT JOIN consignment_predictions cp 
+            ON ct.consignment_id = cp.consignment_id 
+            WHERE cp.consignment_id IS NULL
+        )
+        SELECT *, fnc_delay_probability(
+        day_of_week, "hour", days_to_deliver, delivery_distance) delay_probability
+        FROM consignment_delta;
+        '''
 
         sfn_execute_statement = _sfn_tasks.CallAwsService(
             self, 'Submit',
@@ -109,15 +125,15 @@ class StepFunctionStack(Stack):
             .next(sfn_wait) \
             .next(sfn_status) \
             .next(sfn_complete
-                 .when(_sfn.Condition.string_equals('$.Result.Status', 'FAILED'), sfn_timer)
-                 .when(_sfn.Condition.string_equals('$.Result.Status', 'NA'), sfn_failed)
-                 .when(_sfn.Condition.string_equals('$.Result.Status', 'FINISHED'), sfn_timer)
-                 .otherwise(sfn_timer))
-        
+                  .when(_sfn.Condition.string_equals('$.Result.Status', 'FAILED'), sfn_timer)
+                  .when(_sfn.Condition.string_equals('$.Result.Status', 'NA'), sfn_failed)
+                  .when(_sfn.Condition.string_equals('$.Result.Status', 'FINISHED'), sfn_timer)
+                  .otherwise(sfn_timer))
+
         sfn_timer.next(sfn_timeout
-                 .when(_sfn.Condition.boolean_equals('$.RuntimeCheckResult.Payload.completeFlag', True), sfn_pass)
-                 .when(_sfn.Condition.boolean_equals('$.RuntimeCheckResult.Payload.completeFlag', False), sfn_execute_statement)
-                 .otherwise(sfn_execute_statement))
+                       .when(_sfn.Condition.boolean_equals('$.RuntimeCheckResult.Payload.completeFlag', True), sfn_pass)
+                       .when(_sfn.Condition.boolean_equals('$.RuntimeCheckResult.Payload.completeFlag', False), sfn_execute_statement)
+                       .otherwise(sfn_execute_statement))
 
         refreshmv_stepfunctions = _sfn.StateMachine(
             self, 'StepFunctions',

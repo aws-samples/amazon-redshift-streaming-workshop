@@ -1,0 +1,223 @@
+﻿vehicle_id,vehicle_location,vehicle_status,last_update
+vehicle_001,ACT,On the move,2022-08-01
+vehicle_002,ACT,On the move,2022-08-01
+vehicle_003,ACT,On the move,2022-08-01
+vehicle_004,ACT,Scheduled maintenance,2022-08-01
+vehicle_005,ACT,On the move,2022-08-01
+vehicle_006,ACT,On the move,2022-08-01
+vehicle_007,ACT,On the move,2022-08-01
+vehicle_008,ACT,On the move,2022-08-01
+vehicle_009,ACT,On the move,2022-08-01
+vehicle_010,ACT,On the move,2022-08-01
+vehicle_011,ACT,On the move,2022-08-01
+vehicle_012,ACT,On the move,2022-08-01
+vehicle_013,ACT,On the move,2022-08-01
+vehicle_014,ACT,On the move,2022-08-01
+vehicle_015,ACT,Scheduled maintenance,2022-08-01
+vehicle_016,ACT,On the move,2022-08-01
+vehicle_017,ACT,On the move,2022-08-01
+vehicle_018,ACT,On the move,2022-08-01
+vehicle_019,ACT,On the move,2022-08-01
+vehicle_020,ACT,On the move,2022-08-01
+vehicle_021,ACT,On the move,2022-08-01
+vehicle_022,ACT,On the move,2022-08-01
+vehicle_023,ACT,On the move,2022-08-01
+vehicle_024,ACT,On the move,2022-08-01
+vehicle_025,ACT,On the move,2022-08-01
+vehicle_026,ACT,On the move,2022-08-01
+vehicle_027,ACT,On the move,2022-08-01
+vehicle_028,ACT,On the move,2022-08-01
+vehicle_029,NSW,On the move,2022-08-01
+vehicle_030,NSW,On the move,2022-08-01
+vehicle_031,NSW,On the move,2022-08-01
+vehicle_032,NSW,On the move,2022-08-01
+vehicle_033,NSW,On the move,2022-08-01
+vehicle_034,NSW,Scheduled maintenance,2022-08-01
+vehicle_035,NSW,On the move,2022-08-01
+vehicle_036,NSW,Unscheduled maintenance,2022-08-01
+vehicle_037,NSW,On the move,2022-08-01
+vehicle_038,NSW,On the move,2022-08-01
+vehicle_039,NSW,On the move,2022-08-01
+vehicle_040,NSW,Scheduled maintenance,2022-08-01
+vehicle_041,NSW,On the move,2022-08-01
+vehicle_042,NSW,On the move,2022-08-01
+vehicle_043,NSW,On the move,2022-08-01
+vehicle_044,NSW,On the move,2022-08-01
+vehicle_045,NSW,Scheduled maintenance,2022-08-01
+vehicle_046,NSW,On the move,2022-08-01
+vehicle_047,NSW,On the move,2022-08-01
+vehicle_048,NSW,On the move,2022-08-01
+vehicle_049,NSW,Scheduled maintenance,2022-08-01
+vehicle_050,NSW,Unscheduled maintenance,2022-08-01
+vehicle_051,NSW,On the move,2022-08-01
+vehicle_052,NSW,Unscheduled maintenance,2022-08-01
+vehicle_053,NSW,On the move,2022-08-01
+vehicle_054,NSW,On the move,2022-08-01
+vehicle_055,NT,On the move,2022-08-01
+vehicle_056,NT,On the move,2022-08-01
+vehicle_057,NT,On the move,2022-08-01
+vehicle_058,NT,On the move,2022-08-01
+vehicle_059,NT,On the move,2022-08-01
+vehicle_060,NT,Scheduled maintenance,2022-08-01
+vehicle_061,NT,On the move,2022-08-01
+vehicle_062,NT,On the move,2022-08-01
+vehicle_063,NT,On the move,2022-08-01
+vehicle_064,NT,On the move,2022-08-01
+vehicle_065,NT,On the move,2022-08-01
+vehicle_066,NT,Scheduled maintenance,2022-08-01
+vehicle_067,NT,On the move,2022-08-01
+vehicle_068,NT,On the move,2022-08-01
+vehicle_069,NT,On the move,2022-08-01
+vehicle_070,NT,On the move,2022-08-01
+vehicle_071,NT,On the move,2022-08-01
+vehicle_072,NT,On the move,2022-08-01
+vehicle_073,NT,On the move,2022-08-01
+vehicle_074,NT,On the move,2022-08-01
+vehicle_075,NT,On the move,2022-08-01
+vehicle_076,NT,Scheduled maintenance,2022-08-01
+vehicle_077,NT,On the move,2022-08-01
+vehicle_078,NT,On the move,2022-08-01
+vehicle_079,NT,On the move,2022-08-01
+vehicle_080,NT,On the move,2022-08-01
+vehicle_081,NT,On the move,2022-08-01
+vehicle_082,NT,On the move,2022-08-01
+vehicle_083,NT,On the move,2022-08-01
+vehicle_084,NT,On the move,2022-08-01
+vehicle_085,NT,On the move,2022-08-01
+vehicle_086,QLD,On the move,2022-08-01
+vehicle_087,QLD,On the move,2022-08-01
+vehicle_088,QLD,On the move,2022-08-01
+vehicle_089,QLD,On the move,2022-08-01
+vehicle_090,QLD,On the move,2022-08-01
+vehicle_091,QLD,On the move,2022-08-01
+vehicle_092,QLD,On the move,2022-08-01
+vehicle_093,QLD,On the move,2022-08-01
+vehicle_094,QLD,On the move,2022-08-01
+vehicle_095,QLD,Scheduled maintenance,2022-08-01
+vehicle_096,QLD,On the move,2022-08-01
+vehicle_097,QLD,On the move,2022-08-01
+vehicle_098,QLD,On the move,2022-08-01
+vehicle_099,QLD,On the move,2022-08-01
+vehicle_100,QLD,Scheduled maintenance,2022-08-01
+vehicle_101,QLD,On the move,2022-08-01
+vehicle_102,QLD,On the move,2022-08-01
+vehicle_103,QLD,On the move,2022-08-01
+vehicle_104,QLD,On the move,2022-08-01
+vehicle_105,QLD,On the move,2022-08-01
+vehicle_106,QLD,On the move,2022-08-01
+vehicle_107,QLD,On the move,2022-08-01
+vehicle_108,QLD,On the move,2022-08-01
+vehicle_109,QLD,On the move,2022-08-01
+vehicle_110,QLD,On the move,2022-08-01
+vehicle_111,QLD,On the move,2022-08-01
+vehicle_112,QLD,On the move,2022-08-01
+vehicle_113,QLD,On the move,2022-08-01
+vehicle_114,SA,On the move,2022-08-01
+vehicle_115,SA,On the move,2022-08-01
+vehicle_116,SA,On the move,2022-08-01
+vehicle_117,SA,On the move,2022-08-01
+vehicle_118,SA,On the move,2022-08-01
+vehicle_119,SA,On the move,2022-08-01
+vehicle_120,SA,Scheduled maintenance,2022-08-01
+vehicle_121,SA,On the move,2022-08-01
+vehicle_122,SA,On the move,2022-08-01
+vehicle_123,SA,On the move,2022-08-01
+vehicle_124,SA,On the move,2022-08-01
+vehicle_125,SA,On the move,2022-08-01
+vehicle_126,SA,On the move,2022-08-01
+vehicle_127,SA,On the move,2022-08-01
+vehicle_128,SA,On the move,2022-08-01
+vehicle_129,SA,On the move,2022-08-01
+vehicle_130,SA,On the move,2022-08-01
+vehicle_131,SA,On the move,2022-08-01
+vehicle_132,SA,On the move,2022-08-01
+vehicle_133,SA,On the move,2022-08-01
+vehicle_134,SA,On the move,2022-08-01
+vehicle_135,SA,On the move,2022-08-01
+vehicle_136,SA,On the move,2022-08-01
+vehicle_137,SA,On the move,2022-08-01
+vehicle_138,SA,On the move,2022-08-01
+vehicle_139,SA,On the move,2022-08-01
+vehicle_140,SA,On the move,2022-08-01
+vehicle_141,SA,On the move,2022-08-01
+vehicle_142,SA,On the move,2022-08-01
+vehicle_143,TAS,On the move,2022-08-01
+vehicle_144,TAS,On the move,2022-08-01
+vehicle_145,TAS,On the move,2022-08-01
+vehicle_146,TAS,On the move,2022-08-01
+vehicle_147,TAS,Scheduled maintenance,2022-08-01
+vehicle_148,TAS,On the move,2022-08-01
+vehicle_149,TAS,On the move,2022-08-01
+vehicle_150,TAS,On the move,2022-08-01
+vehicle_151,TAS,On the move,2022-08-01
+vehicle_152,TAS,On the move,2022-08-01
+vehicle_153,TAS,On the move,2022-08-01
+vehicle_154,TAS,Scheduled maintenance,2022-08-01
+vehicle_155,TAS,On the move,2022-08-01
+vehicle_156,TAS,On the move,2022-08-01
+vehicle_157,TAS,On the move,2022-08-01
+vehicle_158,TAS,On the move,2022-08-01
+vehicle_159,TAS,On the move,2022-08-01
+vehicle_160,TAS,On the move,2022-08-01
+vehicle_161,TAS,On the move,2022-08-01
+vehicle_162,TAS,On the move,2022-08-01
+vehicle_163,TAS,On the move,2022-08-01
+vehicle_164,TAS,On the move,2022-08-01
+vehicle_165,TAS,On the move,2022-08-01
+vehicle_166,TAS,On the move,2022-08-01
+vehicle_167,TAS,On the move,2022-08-01
+vehicle_168,TAS,On the move,2022-08-01
+vehicle_169,TAS,On the move,2022-08-01
+vehicle_170,VIC,On the move,2022-08-01
+vehicle_171,VIC,On the move,2022-08-01
+vehicle_172,VIC,On the move,2022-08-01
+vehicle_173,VIC,On the move,2022-08-01
+vehicle_174,VIC,On the move,2022-08-01
+vehicle_175,VIC,On the move,2022-08-01
+vehicle_176,VIC,On the move,2022-08-01
+vehicle_177,VIC,Scheduled maintenance,2022-08-01
+vehicle_178,VIC,On the move,2022-08-01
+vehicle_179,VIC,On the move,2022-08-01
+vehicle_180,VIC,Scheduled maintenance,2022-08-01
+vehicle_181,VIC,On the move,2022-08-01
+vehicle_182,VIC,On the move,2022-08-01
+vehicle_183,VIC,Scheduled maintenance,2022-08-01
+vehicle_184,VIC,On the move,2022-08-01
+vehicle_185,VIC,On the move,2022-08-01
+vehicle_186,VIC,On the move,2022-08-01
+vehicle_187,VIC,On the move,2022-08-01
+vehicle_188,VIC,On the move,2022-08-01
+vehicle_189,VIC,On the move,2022-08-01
+vehicle_190,VIC,On the move,2022-08-01
+vehicle_191,VIC,On the move,2022-08-01
+vehicle_192,VIC,On the move,2022-08-01
+vehicle_193,VIC,On the move,2022-08-01
+vehicle_194,VIC,On the move,2022-08-01
+vehicle_195,VIC,On the move,2022-08-01
+vehicle_196,VIC,On the move,2022-08-01
+vehicle_197,WA,On the move,2022-08-01
+vehicle_198,WA,On the move,2022-08-01
+vehicle_199,WA,On the move,2022-08-01
+vehicle_200,WA,On the move,2022-08-01
+vehicle_201,WA,Scheduled maintenance,2022-08-01
+vehicle_202,WA,On the move,2022-08-01
+vehicle_203,WA,On the move,2022-08-01
+vehicle_204,WA,On the move,2022-08-01
+vehicle_205,WA,On the move,2022-08-01
+vehicle_206,WA,On the move,2022-08-01
+vehicle_207,WA,On the move,2022-08-01
+vehicle_208,WA,On the move,2022-08-01
+vehicle_209,WA,On the move,2022-08-01
+vehicle_210,WA,On the move,2022-08-01
+vehicle_211,WA,On the move,2022-08-01
+vehicle_212,WA,On the move,2022-08-01
+vehicle_213,WA,On the move,2022-08-01
+vehicle_214,WA,On the move,2022-08-01
+vehicle_215,WA,On the move,2022-08-01
+vehicle_216,WA,On the move,2022-08-01
+vehicle_217,WA,Scheduled maintenance,2022-08-01
+vehicle_218,WA,On the move,2022-08-01
+vehicle_219,WA,On the move,2022-08-01
+vehicle_220,WA,On the move,2022-08-01
+vehicle_221,WA,On the move,2022-08-01
+vehicle_222,WA,On the move,2022-08-01
