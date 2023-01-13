@@ -159,7 +159,7 @@ The training of a new Redshift ML model has been initiated as part of the CDK de
 
 ```sql
 CREATE MODEL ml_delay_prediction -- already executed by CDK
-FROM (SELECT \* FROM ext_s3.consignment_train)
+FROM (SELECT * FROM ext_s3.consignment_train)
 TARGET probability
 FUNCTION fnc_delay_probabilty
 IAM_ROLE default
@@ -181,7 +181,7 @@ This final output is persisted into the consignment_predictions table and AWS St
 
 ```sql
 CREATE TABLE consignment_predictions AS
-SELECT \*, fnc_delay_probability(
+SELECT *, fnc_delay_probability(
 day_of_week, "hour", days_to_deliver, delivery_distance) delay_probability
 FROM consignment_transformed;
 ```
@@ -222,35 +222,32 @@ Click on **Create workspace**.
 
 Specify a workspace name: **redshift_streaming_workspace**
 
-<img src="./images/image-20220601103241863.png" alt="image-20220601103241863" style="zoom:50%;" /
-
+![image-20220601103241863](./images/image-20220601103241863.png)
 Select **AWS Single Sign-On** as the authentication method and click on **Create user**.
 
-<img src="./images/image-20220601103404934.png" alt="image-20220601103404934" style="zoom:50%;" /
 
+![image-20220601103241863](./images/image-20220601103241863.png)
 Specify user details and click **Create user**
 
-<img src="./images/image-20220601103538765.png" alt="image-20220601103538765" style="zoom: 50%;" /
 
+![image-20220601105429528](./images/image-20220601105429528.png)
 The user will receive an email to accept invitation to AWS SSO.
 
 ![image-20220601103906448](./images/image-20220601103906448.png)
 
 Accepting the invitation will prompt for the user to specify a password.
 
-<img src="./images/image-20220601104031456.png" alt="image-20220601104031456" style="zoom: 40%;" /
-
+![image-20220601104031456](./images/image-20220601104031456.png)
 
 
 Click **Next**
 
-<img src="./images/image-20220601104211596.png" alt="image-20220601104211596" style="zoom:50%;" /
-
+![image-20220601104211596](./images/image-20220601104211596.png)
 
 
 On Service managed permission settings, select **Amazon Redshift** as a datasource and select **Amazon SNS** as a notification channel.
 
-<img src="./images/image-20220601104510191.png" alt="image-20220601104510191" style="zoom:50%;" /
+![image-20220601104510191](./images/image-20220601104510191.png)
 
 Review workspace creation settings and click on **Create workspace**.
 
@@ -278,7 +275,8 @@ Enter **username**
 
 Enter **password**
 
-<img src="./images/image-20220601110210714.png" alt="image-20220601110210714" style="zoom:40%;" /
+
+![image-20220601110210714](./images/image-20220601110210714.png)
 
 You should now be logged in to the Amazon Managed Grafana dashboard.
 
@@ -298,24 +296,20 @@ Rename datasource to **Redshift Streaming**
 
 Set Database User to **redshift_data_api_user**. Click on **Save & test**.
 
-<img src="./images/image-20220601121543957.png" alt="image-20220601121543957" style="zoom:50%;" /
-
+![image-20220601121543957](./images/image-20220601121543957.png)
 Now let us import the pre-built dashboard. Click on the **+** side menu and click **Import**.
 
-<img src="./images/image-20220601121846321.png" alt="image-20220601121846321" style="zoom:50%;" /
+![image-20220601121846321](./images/image-20220601121846321.png)
 
 Copy and paste the contents of the [dashboard.json](https://raw.githubusercontent.com/aws-samples/amazon-redshift-streaming-workshop/main/dashboard.json) file into the Import via panel json textbox. Click Load.
 
-<img src="./images/image-20220601123118745.png" alt="image-20220601123118745" style="zoom:50%;" /
-
+![image-20220601123118745](./images/image-20220601123118745.png)
 Click **Import**.
 
-<img src="./images/image-20220601123243439.png" alt="image-20220601123243439" style="zoom:50%;" /
-
+![image-20220601123243439](./images/image-20220601123243439.png)
 Now we have the Logistics Dashboard on Amazon Managed Grafana. This dashboard refreshes every 5 seconds and runs a query against the materialized views that we previously created in Amazon Redshift.
 
-![image-20220601123345968](./images/image-20220601123345968.png)
-
+![dashboard](./images/dashboard.png)
 
 
 ### Clean up
