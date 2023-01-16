@@ -498,10 +498,10 @@ class MasterStack(Stack):
             vpc=vpc
         )
 
-        cfn_environment_eC2 = _c9.CfnEnvironmentEC2(
-            self, 
-            "MyCfnEnvironmentEC2",
-            instance_type="t3.large",
-            connection_type="CONNECT_SSM",
-            image_id="amazonlinux-2-x86_64"
-        )
+        # cfn_environment_eC2 = _c9.CfnEnvironmentEC2(
+        #     self, 
+        #     "MyCfnEnvironmentEC2",
+        #     instance_type="t3.large",
+        #     connection_type="CONNECT_SSM",
+        #     image_id="amazonlinux-2-x86_64"
+        # )
