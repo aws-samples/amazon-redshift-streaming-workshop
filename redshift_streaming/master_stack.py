@@ -207,67 +207,67 @@ class MasterStack(Stack):
             roles=[rs_role],
         )
 
-        # rs_namespace = _rss.CfnNamespace(
-        #     self,
-        #     "redshiftServerlessNamespace",
-        #     namespace_name=redshift_config['namespace_name'],
-        #     db_name=redshift_config['db_name'],
-        #     default_iam_role_arn=rs_role.role_arn,
-        #     iam_roles=[rs_role.role_arn],
-        #     admin_username=redshift_config['admin_username'],
-        #     admin_user_password=redshift_password.secret_value.unsafe_unwrap(),
-        # )
+        rs_namespace = _rss.CfnNamespace(
+            self,
+            "redshiftServerlessNamespace",
+            namespace_name=redshift_config['namespace_name'],
+            db_name=redshift_config['db_name'],
+            default_iam_role_arn=rs_role.role_arn,
+            iam_roles=[rs_role.role_arn],
+            admin_username=redshift_config['admin_username'],
+            admin_user_password=redshift_password.secret_value.unsafe_unwrap(),
+        )
 
-        # rs_workgroup = _rss.CfnWorkgroup(
-        #     self,
-        #     "redshiftServerlessWorkgroup",
-        #     workgroup_name=redshift_config['workgroup_name'],
-        #     base_capacity=32,
-        #     publicly_accessible=True,
-        #     namespace_name=rs_namespace.ref,
-        #     security_group_ids=[rs_security_group.security_group_id],
-        # )
+        rs_workgroup = _rss.CfnWorkgroup(
+            self,
+            "redshiftServerlessWorkgroup",
+            workgroup_name=redshift_config['workgroup_name'],
+            base_capacity=32,
+            publicly_accessible=True,
+            namespace_name=rs_namespace.ref,
+            security_group_ids=[rs_security_group.security_group_id],
+        )
 
-        # rs_cluster_subnet_group = _rs.CfnClusterSubnetGroup(
-        #     self,
-        #     "redshiftSubnetGroup",
-        #     subnet_ids=vpc.select_subnets(
-        #         subnet_type=_ec2.SubnetType.PUBLIC
-        #     ).subnet_ids,
-        #     description="Redshift Subnet Group"
-        # )
+        rs_cluster_subnet_group = _rs.CfnClusterSubnetGroup(
+            self,
+            "redshiftSubnetGroup",
+            subnet_ids=vpc.select_subnets(
+                subnet_type=_ec2.SubnetType.PUBLIC
+            ).subnet_ids,
+            description="Redshift Subnet Group"
+        )
 
-        # rs_cluster = _rs.CfnCluster(
-        #     self,
-        #     "redshiftCluster",
-        #     cluster_type=redshift_config['cluster_type'],
-        #     number_of_nodes=redshift_config['number_of_nodes'],
-        #     db_name=redshift_config['db_name'],
-        #     master_username=redshift_config['admin_username'],
-        #     master_user_password=redshift_password.secret_value.unsafe_unwrap(),
-        #     iam_roles=[rs_role.role_arn],
-        #     node_type=redshift_config['node_type'],
-        #     publicly_accessible=False,
-        #     cluster_subnet_group_name=rs_cluster_subnet_group.ref,
-        #     vpc_security_group_ids=[
-        #         rs_security_group.security_group_id],
-        # )
+        rs_cluster = _rs.CfnCluster(
+            self,
+            "redshiftCluster",
+            cluster_type=redshift_config['cluster_type'],
+            number_of_nodes=redshift_config['number_of_nodes'],
+            db_name=redshift_config['db_name'],
+            master_username=redshift_config['admin_username'],
+            master_user_password=redshift_password.secret_value.unsafe_unwrap(),
+            iam_roles=[rs_role.role_arn],
+            node_type=redshift_config['node_type'],
+            publicly_accessible=False,
+            cluster_subnet_group_name=rs_cluster_subnet_group.ref,
+            vpc_security_group_ids=[
+                rs_security_group.security_group_id],
+        )
 
-        # aws_custom_default_iam = _cr.AwsCustomResource(
-        #     self, "aws-custom-default-iam",
-        #     on_create=_cr.AwsSdkCall(
-        #         service="Redshift",
-        #         action="modifyClusterIamRoles",
-        #         parameters={
-        #             "ClusterIdentifier": rs_cluster.ref,
-        #             "DefaultIamRoleArn": rs_role.role_arn
-        #         },
-        #         physical_resource_id=_cr.PhysicalResourceId.of("physicalResourceStateMachine")
-        #     ),
-        #     policy=_cr.AwsCustomResourcePolicy.from_sdk_calls(
-        #         resources=_cr.AwsCustomResourcePolicy.ANY_RESOURCE
-        #     )
-        # )
+        aws_custom_default_iam = _cr.AwsCustomResource(
+            self, "aws-custom-default-iam",
+            on_create=_cr.AwsSdkCall(
+                service="Redshift",
+                action="modifyClusterIamRoles",
+                parameters={
+                    "ClusterIdentifier": rs_cluster.ref,
+                    "DefaultIamRoleArn": rs_role.role_arn
+                },
+                physical_resource_id=_cr.PhysicalResourceId.of("physicalResourceStateMachine")
+            ),
+            policy=_cr.AwsCustomResourcePolicy.from_sdk_calls(
+                resources=_cr.AwsCustomResourcePolicy.ANY_RESOURCE
+            )
+        )
 
         cfn_notebook_instance_lifecycle_config = _sg.CfnNotebookInstanceLifecycleConfig(
             self, 
@@ -503,8 +503,5 @@ class MasterStack(Stack):
             "MyCfnEnvironmentEC2",
             instance_type="t3.large",
             connection_type="CONNECT_SSM",
-            image_id="amazonlinux-2-x86_64",
-            subnet_id=vpc.select_subnets(
-                subnet_type=_ec2.SubnetType.PUBLIC
-            ).subnet_ids[0]
+            image_id="amazonlinux-2-x86_64"
         )
