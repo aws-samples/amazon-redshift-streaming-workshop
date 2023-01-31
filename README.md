@@ -92,10 +92,10 @@ A materialized view is used to parse data in the kinesis data stream. In this ca
 
 ```sql
 CREATE MATERIALIZED VIEW consignment_stream AS
-SELECT approximate_arrival_timestamp,  
-JSON_PARSE(from_varbyte(kinesis_data, 'utf-8')) as consignment_data FROM ext_kinesis.consignment_stream
-WHERE is_utf8(kinesis_data)
-AND is_valid_json(from_varbyte(kinesis_data, 'utf-8'));
+SELECT approximate_arrival_timestamp,
+JSON_PARSE(from_varbyte(kinesis_data, 'utf-8')) as consignment_data FROM ext_kinesis.consignment_stream
+WHERE is_utf8(kinesis_data)
+AND is_valid_json(from_varbyte(kinesis_data, 'utf-8'));
 ```
 
 Refreshing the materialized view invokes Amazon Redshift to read directly from the data stream and load data into the materialized view. This refresh can be done automatically by adding the [AUTO REFRESH](https://docs.aws.amazon.com/redshift/latest/dg/materialized-view-create-sql-command.html) clause in the materialized view definition. However, in this example, we are orchestrating the end-to-end data pipeline using AWS Step Functions.
@@ -163,7 +163,7 @@ FUNCTION fnc_delay_probabilty
 IAM_ROLE default
 SETTINGS (
 MAX_RUNTIME 1800, --seconds
-S3_BUCKET '\<ingestionstack-s3bucketname\' --replace S3 bucket name
+S3_BUCKET '<ingestionstack-s3bucketname>' --replace S3 bucket name
 )
 ```
 
