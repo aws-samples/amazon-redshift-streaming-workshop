@@ -79,8 +79,6 @@ User name: **rsstream_user**
 
 Click **Create connection**
 
-![image-20220601100630463](./images/image-20220601100630463.png)
-
 **Access streaming data using Amazon Redshift streaming ingestion feature**
 
 The CDK deployment will provision a Redshift cluster with the appropriate default IAM role to access the Kinesis data stream. We can create an external schema to establish connection between the Redshift cluster and the Kinesis data stream. 
