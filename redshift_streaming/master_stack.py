@@ -35,11 +35,18 @@ class MasterStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
         
         environment = self.node.try_get_context('environment')
-        glue_config = self.node.try_get_context(f'{environment}_glue_config')
-        kinesis_config = self.node.try_get_context(f'{environment}_kinesis_config')
         redshift_config = self.node.try_get_context(f'{environment}_redshift_config')
-        sagemaker_config = self.node.try_get_context(f'{environment}_sagemaker_config')
-
+        kinesis_retention_period=72
+        kinesis_stream_mode=_kinesis.StreamMode.ON_DEMAND
+        kinesis_encryption=_kinesis.StreamEncryption.UNENCRYPTED
+        dynamodb_billing_mode=_dynamodb.BillingMode.PAY_PER_REQUEST
+        glue_database_name="ext_s3"
+        rs_security_group_name="default"
+        rs_admin_username="admin"
+        rs_workgroup_name="default-wg"
+        rs_namespace_name="default-ns"
+        rs_db_name="dev"
+        
         vpc = _ec2.Vpc.from_lookup(
             self,
             "VpcId",
@@ -49,7 +56,7 @@ class MasterStack(Stack):
         rs_security_group = _ec2.SecurityGroup.from_lookup_by_name(
             self,
             "redshiftSecurityGroup",
-            security_group_name=redshift_config['security_group_name'],
+            security_group_name=rs_security_group_name,
             vpc=vpc
         )
 
@@ -155,7 +162,7 @@ class MasterStack(Stack):
             "redshift_credentials",
             description="Redshift credentials",
             secret_string_value=SecretValue.unsafe_plain_text(
-                json.dumps({'username':redshift_config['admin_username'], 
+                json.dumps({'username':rs_admin_username, 
                 'password':redshift_password.secret_value.unsafe_unwrap()})
                 ),
             removal_policy=RemovalPolicy.DESTROY,
@@ -210,85 +217,73 @@ class MasterStack(Stack):
         rs_namespace = _rss.CfnNamespace(
             self,
             "redshiftServerlessNamespace",
-            namespace_name=redshift_config['namespace_name'],
-            db_name=redshift_config['db_name'],
+            namespace_name=rs_namespace_name,
+            db_name=rs_db_name,
             default_iam_role_arn=rs_role.role_arn,
             iam_roles=[rs_role.role_arn],
-            admin_username=redshift_config['admin_username'],
+            admin_username=rs_admin_username,
             admin_user_password=redshift_password.secret_value.unsafe_unwrap(),
         )
 
         rs_workgroup = _rss.CfnWorkgroup(
             self,
             "redshiftServerlessWorkgroup",
-            workgroup_name=redshift_config['workgroup_name'],
+            workgroup_name=rs_workgroup_name,
             base_capacity=32,
             publicly_accessible=True,
             namespace_name=rs_namespace.ref,
             security_group_ids=[rs_security_group.security_group_id],
         )
 
-        rs_cluster_subnet_group = _rs.CfnClusterSubnetGroup(
+        consignment_stream = _kinesis.Stream(
             self,
-            "redshiftSubnetGroup",
-            subnet_ids=vpc.select_subnets(
-                subnet_type=_ec2.SubnetType.PUBLIC
-            ).subnet_ids,
-            description="Redshift Subnet Group"
+            "consignment_stream",
+            stream_name="consignment_stream",
+            retention_period=Duration.hours(kinesis_retention_period),
+            stream_mode=kinesis_stream_mode,
+            encryption=kinesis_encryption,
         )
 
-        rs_cluster = _rs.CfnCluster(
-            self,
-            "redshiftCluster",
-            cluster_type=redshift_config['cluster_type'],
-            number_of_nodes=redshift_config['number_of_nodes'],
-            db_name=redshift_config['db_name'],
-            master_username=redshift_config['admin_username'],
-            master_user_password=redshift_password.secret_value.unsafe_unwrap(),
-            iam_roles=[rs_role.role_arn],
-            node_type=redshift_config['node_type'],
-            publicly_accessible=False,
-            cluster_subnet_group_name=rs_cluster_subnet_group.ref,
-            vpc_security_group_ids=[
-                rs_security_group.security_group_id],
+        dynamodb_table = _dynamodb.Table(
+            self, "Table",
+            table_name='latest_key',
+            partition_key=_dynamodb.Attribute(
+                name="id", type=_dynamodb.AttributeType.NUMBER),
+            billing_mode=dynamodb_billing_mode,
+            removal_policy=RemovalPolicy.DESTROY
         )
 
-        aws_custom_default_iam = _cr.AwsCustomResource(
-            self, "aws-custom-default-iam",
-            on_create=_cr.AwsSdkCall(
-                service="Redshift",
-                action="modifyClusterIamRoles",
-                parameters={
-                    "ClusterIdentifier": rs_cluster.ref,
-                    "DefaultIamRoleArn": rs_role.role_arn
-                },
-                physical_resource_id=_cr.PhysicalResourceId.of("physicalResourceStateMachine")
-            ),
-            policy=_cr.AwsCustomResourcePolicy.from_sdk_calls(
-                resources=_cr.AwsCustomResourcePolicy.ANY_RESOURCE
-            )
+        lambdaLayer = _lambda.LayerVersion(self, 'lambda-layer',
+                                           code=_lambda.AssetCode(
+                                               'lambda/layer/'),
+                                           compatible_runtimes=[
+                                               _lambda.Runtime.PYTHON_3_8],
+                                           )
+        step_trigger = _events.Rule(
+            self, 'StepTrigger',
+            schedule=_events.Schedule.rate(Duration.seconds(60))
         )
 
-        cfn_notebook_instance_lifecycle_config = _sg.CfnNotebookInstanceLifecycleConfig(
-            self, 
-            "sagemakerLifecycleConfig",
-            notebook_instance_lifecycle_config_name=sagemaker_config['lifecycle_config_name'],
-            on_create=[_sg.CfnNotebookInstanceLifecycleConfig.NotebookInstanceLifecycleHookProperty(
-                content=sagemaker_config['content']
-            )]
+        order_lambda = _lambda.Function(
+            self, 'order-lambda',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            function_name='order-lambda',
+            description='Lambda function deployed using AWS CDK Python',
+            code=_lambda.AssetCode('./lambda/code/order'),
+            handler='order_producer.lambda_handler',
+            layers=[lambdaLayer],
+            environment={
+                "LOG_LEVEL": "INFO",
+                "STREAM_NAME": f"{consignment_stream.stream_name}"
+            },
+            timeout=Duration.seconds(60),
         )
 
-        cfn_notebook_instance = _sg.CfnNotebookInstance(
-            self, 
-            "sagemakerNotebook",
-            instance_type=sagemaker_config['instance_type'],
-            role_arn=sg_role.role_arn,
-            lifecycle_config_name=cfn_notebook_instance_lifecycle_config.notebook_instance_lifecycle_config_name,
-            platform_identifier=sagemaker_config['platform_identifier'],
-            security_group_ids=[sg_security_group.security_group_id],
-            subnet_id=vpc.select_subnets(
-                subnet_type=_ec2.SubnetType.PUBLIC
-            ).subnet_ids[0]
+        consignment_stream.grant_read_write(order_lambda)
+        dynamodb_table.grant_read_write_data(order_lambda)
+
+        step_trigger.add_target(
+            _events_targets.LambdaFunction(order_lambda)
         )
 
         s3_bucket_raw = _s3.Bucket(
@@ -299,61 +294,6 @@ class MasterStack(Stack):
             block_public_access=_s3.BlockPublicAccess.BLOCK_ALL,
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
-        )
-
-        order_stream = _kinesis.Stream(
-            self,
-            "order-stream",
-            stream_name="order_stream",
-            retention_period=Duration.hours(kinesis_config['retention_period']),
-            stream_mode=_kinesis.StreamMode.ON_DEMAND,
-            encryption=_kinesis.StreamEncryption.UNENCRYPTED
-        )
-
-        s3_bucket_raw.grant_read_write(rs_role)
-        order_stream.grant_read(rs_role)
-
-        dynamodb_table = _dynamodb.Table(
-            self, "Table",
-            table_name='latest_key',
-            partition_key=_dynamodb.Attribute(name="id", type=_dynamodb.AttributeType.NUMBER),
-            billing_mode=_dynamodb.BillingMode.PAY_PER_REQUEST,
-            removal_policy=RemovalPolicy.DESTROY
-        )
-
-        lambda_layer = _lambda.LayerVersion(self, 
-            'lambda-layer',
-            code = _lambda.AssetCode('lambda/layer/python.zip'),
-            compatible_runtimes = [_lambda.Runtime.PYTHON_3_8],
-        )
-
-        order_lambda = _lambda.Function(
-            self, 'order-lambda',
-            runtime=_lambda.Runtime.PYTHON_3_8,
-            function_name='order-lambda',
-            description='Lambda function deployed using AWS CDK Python',
-            code=_lambda.AssetCode('./lambda/code/order'),
-            handler='order_producer.lambda_handler',
-            layers = [lambda_layer],
-            environment={
-                "LOG_LEVEL": "INFO",
-                "STREAM_NAME": f"order_stream"
-            },
-            timeout=Duration.seconds(60),
-            reserved_concurrent_executions=1,
-        )
-
-        order_stream.grant_read_write(order_lambda)
-        dynamodb_table.grant_read_write_data(order_lambda)
-
-
-        step_trigger = _events.Rule(
-            self, 'StepTrigger',
-            schedule=_events.Schedule.rate(Duration.seconds(60))
-        )
-        
-        step_trigger.add_target(
-            _events_targets.LambdaFunction(order_lambda)
         )
 
         _s3_deploy.BucketDeployment(
@@ -382,7 +322,7 @@ class MasterStack(Stack):
             "database",
             catalog_id=Aws.ACCOUNT_ID,
             database_input=_glue.CfnDatabase.DatabaseInputProperty(
-                name=glue_config['glue_db']
+                name=glue_database_name
             ),
         )
         database.apply_removal_policy(policy=RemovalPolicy.DESTROY)
@@ -410,7 +350,7 @@ class MasterStack(Stack):
                     _glue.CfnCrawler.S3TargetProperty(path=s3_bucket_raw.bucket_name)
                 ],
             ),
-            database_name=glue_config['glue_db'],
+            database_name=glue_database_name,
             role=crawler_role.role_name,
             classifiers=[csv_classifier.ref]
         )
@@ -429,13 +369,42 @@ class MasterStack(Stack):
                 resources=_cr.AwsCustomResourcePolicy.ANY_RESOURCE
             )
         ) 
-
+        
+        
         lambda_layer = _lambda.LayerVersion(self, 
             'refreshmv-lambda-layer',
             code = _lambda.AssetCode('lambda/layer/python.zip'),
             compatible_runtimes = [_lambda.Runtime.PYTHON_3_8],
         )
+        
+        rs_sql = f'''
+        CREATE EXTERNAL SCHEMA IF NOT EXISTS ext_s3
+        FROM DATA CATALOG
+        DATABASE 'ext_s3'
+        IAM_ROLE default;
 
+        CREATE MODEL ml_delay_prediction
+        FROM (SELECT * FROM ext_s3.consignment_train)
+        TARGET probability
+        FUNCTION fnc_delay_probability
+        IAM_ROLE default
+        SETTINGS (
+            MAX_RUNTIME 1800, --seconds
+            S3_BUCKET '{s3_bucket_raw.bucket_name}' 
+        );
+
+        CREATE MATERIALIZED VIEW fleet_summary AS
+        SELECT vehicle_location, 
+        COUNT(CASE WHEN vehicle_status = 'On the move' THEN 1 END) on_the_move, 
+        COUNT(CASE WHEN vehicle_status = 'Scheduled maintenance' THEN 1 END) scheduled_maintenance,
+        COUNT(CASE WHEN vehicle_status = 'Unscheduled maintenance' THEN 1 END) unscheduled_maintenance
+        FROM ext_s3.fleet
+        GROUP BY 1
+        ;
+        '''
+        
+        
+        
         refreshmv_lambda = _lambda.Function(
             self, 'refreshmv-lambda',
             runtime=_lambda.Runtime.PYTHON_3_8,
@@ -445,11 +414,10 @@ class MasterStack(Stack):
             handler='refreshmv.lambda_handler',
             layers = [lambda_layer],
             environment={
-                "WORKGROUP_NAME" : redshift_config['workgroup_name'],
-                "DB_NAME" : redshift_config['db_name'],
-                "REFRESHMV" : redshift_config['refreshmv'],
-                "SECRET_NAME": redshift_config['secret_name']
-
+                "WORKGROUP_NAME" : rs_workgroup_name,
+                "DB_NAME" : rs_db_name,
+                "SQL" : rs_sql,
+                "SECRET_ARN": redshift_credentials.secret_full_arn,
             },
             timeout=Duration.seconds(60),
             reserved_concurrent_executions=1,
@@ -471,37 +439,3 @@ class MasterStack(Stack):
         step_trigger.add_target(
             _events_targets.LambdaFunction(refreshmv_lambda)
         )
-
-        rds_cluster = _rds.DatabaseCluster(self, "auroraDB",
-                                          engine=_rds.DatabaseClusterEngine.aurora_postgres(
-                                              version=_rds.AuroraPostgresEngineVersion.VER_11_16),
-                                          instance_props=_rds.InstanceProps(
-                                            # optional , defaults to t3.medium
-                                            #   instance_type=_ec2.InstanceType.of(
-                                            #       _ec2.InstanceClass.BURSTABLE2, _ec2.InstanceSize.SMALL),
-                                              vpc_subnets=_ec2.SubnetSelection(
-                                                  subnet_type=_ec2.SubnetType.PUBLIC
-                                              ),
-                                              vpc=vpc,
-                                              security_groups=[pg_security_group]
-                                          ),
-                                          s3_import_buckets=[s3_bucket_raw],
-                                          storage_encrypted=True
-                                          )
-
-        rds_cluster.add_proxy(
-            "aurora-proxy",
-            borrow_timeout=Duration.seconds(30),
-            max_connections_percent=50,
-            secrets=[rds_cluster.secret],
-            security_groups=[pg_security_group],
-            vpc=vpc
-        )
-
-        # cfn_environment_eC2 = _c9.CfnEnvironmentEC2(
-        #     self, 
-        #     "MyCfnEnvironmentEC2",
-        #     instance_type="t3.large",
-        #     connection_type="CONNECT_SSM",
-        #     image_id="amazonlinux-2-x86_64"
-        # )
