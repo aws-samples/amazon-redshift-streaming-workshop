@@ -13,7 +13,7 @@ app = cdk.App(context=constants.context_constants)
 #Aspects.of(app).add(AwsSolutionsChecks(verbose=True))
 environment = app.node.try_get_context("environment")
 env=cdk.Environment( account = os.environ["CDK_DEFAULT_ACCOUNT"],
-        region = "us-east-2")
+        region = os.environ["CDK_DEFAULT_REGION"])
 
 MasterStack(app,  "MasterStack", env=env)
 # #add init  stack      
