@@ -18,21 +18,12 @@ def lambda_handler(event, context):
     
     try:
         redshift_data_client = boto3.client('redshift-data')
-        
-        for i in range(5):
-            response = redshift_data_client.execute_statement(
-                Database=db_name,
-                SecretArn=secret_arn,
-                Sql=sql,
-                WorkgroupName=workgroup_name
-            )
-            for i in range(15):
-                cur_status = redshift_data_client.describe_statement(Id=response['Id'])['Status']
-                if cur_status == 'FINISHED':
-                    break
-                time.sleep(1)
-            time.sleep(1)
-            LOGGER.info(response)
+        response = redshift_data_client.execute_statement(
+            Database=db_name,
+            SecretArn=secret_arn,
+            Sql=sql,
+            WorkgroupName=workgroup_name
+        )
             
     # catch connection exceptions
     except Exception as e:

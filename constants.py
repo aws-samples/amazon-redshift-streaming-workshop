@@ -23,7 +23,7 @@ context_constants = {
     },
     # Kinesis Configuration,
     "dev_kinesis_config": {
-        "stream_name": f"order-stream",
+        "stream_name": f"consignment-stream",
         "retention_period": 72,
     },
     # Redshift Configuration

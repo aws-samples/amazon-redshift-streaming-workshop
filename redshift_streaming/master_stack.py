@@ -39,6 +39,7 @@ class MasterStack(Stack):
         kinesis_retention_period=72
         kinesis_stream_mode=_kinesis.StreamMode.ON_DEMAND
         kinesis_encryption=_kinesis.StreamEncryption.UNENCRYPTED
+        kinesis_stream_name="consignment_stream"
         dynamodb_billing_mode=_dynamodb.BillingMode.PAY_PER_REQUEST
         glue_database_name="ext_s3"
         rs_security_group_name="default"
@@ -46,6 +47,7 @@ class MasterStack(Stack):
         rs_workgroup_name="default-wg"
         rs_namespace_name="default-ns"
         rs_db_name="dev"
+        rs_admin_password="Welcome!123"
         
         vpc = _ec2.Vpc.from_lookup(
             self,
@@ -149,32 +151,31 @@ class MasterStack(Stack):
             ]
         )
 
-        redshift_password = _sm.Secret(
-            self,
-            "redshift_password",
-            description="Redshift password",
-            generate_secret_string=_sm.SecretStringGenerator(exclude_punctuation=True),
-            removal_policy=RemovalPolicy.DESTROY,
-        )
-
         redshift_credentials = _sm.Secret(
             self,
             "redshift_credentials",
             description="Redshift credentials",
             secret_string_value=SecretValue.unsafe_plain_text(
                 json.dumps({'username':rs_admin_username, 
-                'password':redshift_password.secret_value.unsafe_unwrap()})
+                'password':rs_admin_password})
                 ),
             removal_policy=RemovalPolicy.DESTROY,
         )
-
+        
         rs_role = _iam.Role(
             self, "redshiftClusterRole",
-            assumed_by=_iam.ServicePrincipal(
-                "redshift.amazonaws.com"),
+            assumed_by=_iam.CompositePrincipal(
+                _iam.ServicePrincipal("redshift.amazonaws.com"),
+                _iam.ServicePrincipal("sagemaker.amazonaws.com")),
             managed_policies=[
                 _iam.ManagedPolicy.from_aws_managed_policy_name(
                     "AmazonRedshiftAllCommandsFullAccess"
+                ),
+                _iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "SecretsManagerReadWrite"
+                ),
+                _iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "AmazonSageMakerFullAccess"
                 )
             ]
         )
@@ -222,7 +223,7 @@ class MasterStack(Stack):
             default_iam_role_arn=rs_role.role_arn,
             iam_roles=[rs_role.role_arn],
             admin_username=rs_admin_username,
-            admin_user_password=redshift_password.secret_value.unsafe_unwrap(),
+            admin_user_password=rs_admin_password,
         )
 
         rs_workgroup = _rss.CfnWorkgroup(
@@ -234,58 +235,7 @@ class MasterStack(Stack):
             namespace_name=rs_namespace.ref,
             security_group_ids=[rs_security_group.security_group_id],
         )
-
-        consignment_stream = _kinesis.Stream(
-            self,
-            "consignment_stream",
-            stream_name="consignment_stream",
-            retention_period=Duration.hours(kinesis_retention_period),
-            stream_mode=kinesis_stream_mode,
-            encryption=kinesis_encryption,
-        )
-
-        dynamodb_table = _dynamodb.Table(
-            self, "Table",
-            table_name='latest_key',
-            partition_key=_dynamodb.Attribute(
-                name="id", type=_dynamodb.AttributeType.NUMBER),
-            billing_mode=dynamodb_billing_mode,
-            removal_policy=RemovalPolicy.DESTROY
-        )
-
-        lambdaLayer = _lambda.LayerVersion(self, 'lambda-layer',
-                                           code=_lambda.AssetCode(
-                                               'lambda/layer/'),
-                                           compatible_runtimes=[
-                                               _lambda.Runtime.PYTHON_3_8],
-                                           )
-        step_trigger = _events.Rule(
-            self, 'StepTrigger',
-            schedule=_events.Schedule.rate(Duration.seconds(60))
-        )
-
-        order_lambda = _lambda.Function(
-            self, 'order-lambda',
-            runtime=_lambda.Runtime.PYTHON_3_8,
-            function_name='order-lambda',
-            description='Lambda function deployed using AWS CDK Python',
-            code=_lambda.AssetCode('./lambda/code/order'),
-            handler='order_producer.lambda_handler',
-            layers=[lambdaLayer],
-            environment={
-                "LOG_LEVEL": "INFO",
-                "STREAM_NAME": f"{consignment_stream.stream_name}"
-            },
-            timeout=Duration.seconds(60),
-        )
-
-        consignment_stream.grant_read_write(order_lambda)
-        dynamodb_table.grant_read_write_data(order_lambda)
-
-        step_trigger.add_target(
-            _events_targets.LambdaFunction(order_lambda)
-        )
-
+        
         s3_bucket_raw = _s3.Bucket(
             self,
             "s3_raw",
@@ -306,16 +256,9 @@ class MasterStack(Stack):
                 )
             ],
         )
-
-        csv_classifier = _glue.CfnClassifier(self, "csv_Classifier",
-            csv_classifier=_glue.CfnClassifier.CsvClassifierProperty(
-                allow_single_column=False,
-                contains_header="PRESENT",
-                delimiter=",",
-                quote_symbol='"'
-            )
-        )
-
+        
+        s3_bucket_raw.grant_read_write(rs_role)
+        
         # glue database for the tables
         database = _glue.CfnDatabase(
             self,
@@ -326,7 +269,173 @@ class MasterStack(Stack):
             ),
         )
         database.apply_removal_policy(policy=RemovalPolicy.DESTROY)
+        
+        init_sql = f'''
+        CREATE EXTERNAL SCHEMA IF NOT EXISTS ext_s3
+        FROM DATA CATALOG
+        DATABASE 'ext_s3'
+        IAM_ROLE default;
 
+        CREATE MODEL ml_delay_prediction
+        FROM (SELECT * FROM ext_s3.consignment_train)
+        TARGET probability
+        FUNCTION fnc_delay_probability
+        IAM_ROLE default
+        SETTINGS (
+            MAX_RUNTIME 1800, --seconds
+            S3_BUCKET '{s3_bucket_raw.bucket_name}' 
+        );
+
+        CREATE MATERIALIZED VIEW fleet_summary AS
+        SELECT vehicle_location, 
+        COUNT(CASE WHEN vehicle_status = 'On the move' THEN 1 END) on_the_move, 
+        COUNT(CASE WHEN vehicle_status = 'Scheduled maintenance' THEN 1 END) scheduled_maintenance,
+        COUNT(CASE WHEN vehicle_status = 'Unscheduled maintenance' THEN 1 END) unscheduled_maintenance
+        FROM ext_s3.fleet
+        GROUP BY 1
+        ;
+        '''
+        lambda_layer = _lambda.LayerVersion(self, 
+            'lambda-layer',
+            code = _lambda.AssetCode('lambda/layer/python.zip'),
+            compatible_runtimes = [_lambda.Runtime.PYTHON_3_8],
+        )
+        
+        initsql_lambda = _lambda.Function(
+            self, 'initsql-lambda',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            function_name='initsql-lambda',
+            description='Lambda function deployed using AWS CDK Python',
+            code=_lambda.AssetCode('./lambda/code/initsql'),
+            handler='initsql.lambda_handler',
+            layers = [lambda_layer],
+            environment={
+                "WORKGROUP_NAME" : rs_workgroup_name,
+                "DB_NAME" : rs_db_name,
+                "SQL" : init_sql,
+                "SECRET_ARN": redshift_credentials.secret_full_arn,
+            },
+            timeout=Duration.seconds(60),
+            reserved_concurrent_executions=1,
+        )
+
+        initsql_lambda.add_to_role_policy(
+            statement=_iam.PolicyStatement(
+                effect=_iam.Effect.ALLOW,
+                actions=["redshift-data:*", "secretsmanager:*"],
+                resources=["*"],
+            )
+        )
+        
+        aws_custom_initsql = _cr.AwsCustomResource(
+            self, "aws-custom-initsql",
+            on_create=_cr.AwsSdkCall(
+                service="Lambda",
+                action="invoke",
+                parameters={
+                    "FunctionName": initsql_lambda.function_name
+                },
+                physical_resource_id=_cr.PhysicalResourceId.of("physicalResourceStateMachine")
+            ),
+            policy=_cr.AwsCustomResourcePolicy.from_statements(
+                statements=[_iam.PolicyStatement(
+                    effect=_iam.Effect.ALLOW,
+                    actions=["lambda:InvokeFunction"],
+                    resources=["*"]
+                )]
+            )
+        ) 
+        
+        
+        aws_custom_initsql.node.add_dependency(rs_workgroup)
+        aws_custom_initsql.node.add_dependency(database)
+        
+        # aws_custom_create_model = _cr.AwsCustomResource(
+        #     self, "aws-custom-redshift-ml",
+        #     install_latest_aws_sdk=True,
+        #     on_create=_cr.AwsSdkCall(
+        #         service="RedshiftData",
+        #         action="executeStatement",
+        #         parameters={
+        #             "WorkgroupName": rs_workgroup_name,
+        #             "SecretArn": redshift_credentials.secret_arn,
+        #             "Database": rs_db_name,
+        #             "Sql": init_sql,
+        #         },
+        #         physical_resource_id=_cr.PhysicalResourceId.of("physicalResourceStateMachine")
+        #     ),
+        #     policy=_cr.AwsCustomResourcePolicy.from_statements(
+        #         statements=[_iam.PolicyStatement(
+        #             effect=_iam.Effect.ALLOW,
+        #             actions=[
+        #                 "secretsmanager:*",
+        #                 "redshift-data:*",
+        #             ],
+        #             resources=["*"]
+        #         )]
+        #     )
+            
+        # )
+        
+        # aws_custom_create_model.node.add_dependency(rs_workgroup)
+        # aws_custom_create_model.node.add_dependency(database)
+
+        consignment_stream = _kinesis.Stream(
+            self,
+            "consignment_stream",
+            stream_name=kinesis_stream_name,
+            retention_period=Duration.hours(kinesis_retention_period),
+            stream_mode=kinesis_stream_mode,
+            encryption=kinesis_encryption,
+        )
+        
+        consignment_stream.grant_read(rs_role)
+
+        dynamodb_table = _dynamodb.Table(
+            self, "Table",
+            table_name='latest_key',
+            partition_key=_dynamodb.Attribute(
+                name="id", type=_dynamodb.AttributeType.NUMBER),
+            billing_mode=dynamodb_billing_mode,
+            removal_policy=RemovalPolicy.DESTROY
+        )
+
+        
+        step_trigger = _events.Rule(
+            self, 'StepTrigger',
+            schedule=_events.Schedule.rate(Duration.seconds(60))
+        )
+
+        order_lambda = _lambda.Function(
+            self, 'order-lambda',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            function_name='order-lambda',
+            description='Lambda function deployed using AWS CDK Python',
+            code=_lambda.AssetCode('./lambda/code/order'),
+            handler='order_producer.lambda_handler',
+            layers=[lambda_layer],
+            environment={
+                "LOG_LEVEL": "INFO",
+                "STREAM_NAME": kinesis_stream_name
+            },
+            timeout=Duration.seconds(60),
+        )
+
+        consignment_stream.grant_read_write(order_lambda)
+        dynamodb_table.grant_read_write_data(order_lambda)
+
+        step_trigger.add_target(
+            _events_targets.LambdaFunction(order_lambda)
+        )
+
+        csv_classifier = _glue.CfnClassifier(self, "csv_Classifier",
+            csv_classifier=_glue.CfnClassifier.CsvClassifierProperty(
+                allow_single_column=False,
+                contains_header="PRESENT",
+                delimiter=",",
+                quote_symbol='"'
+            )
+        )
         # glue crawler role
         crawler_role = _iam.Role(
             self,
@@ -371,36 +480,19 @@ class MasterStack(Stack):
         ) 
         
         
-        lambda_layer = _lambda.LayerVersion(self, 
-            'refreshmv-lambda-layer',
-            code = _lambda.AssetCode('lambda/layer/python.zip'),
-            compatible_runtimes = [_lambda.Runtime.PYTHON_3_8],
+        rs_sql = '''REFRESH MATERIALIZED VIEW consignment_stream;
+        REFRESH MATERIALIZED VIEW consignment_transformed;
+        INSERT INTO consignment_predictions
+        WITH consignment_delta as (
+            SELECT ct.*
+            FROM consignment_transformed ct
+            LEFT JOIN consignment_predictions cp 
+            ON ct.consignment_id = cp.consignment_id 
+            WHERE cp.consignment_id IS NULL
         )
-        
-        rs_sql = f'''
-        CREATE EXTERNAL SCHEMA IF NOT EXISTS ext_s3
-        FROM DATA CATALOG
-        DATABASE 'ext_s3'
-        IAM_ROLE default;
-
-        CREATE MODEL ml_delay_prediction
-        FROM (SELECT * FROM ext_s3.consignment_train)
-        TARGET probability
-        FUNCTION fnc_delay_probability
-        IAM_ROLE default
-        SETTINGS (
-            MAX_RUNTIME 1800, --seconds
-            S3_BUCKET '{s3_bucket_raw.bucket_name}' 
-        );
-
-        CREATE MATERIALIZED VIEW fleet_summary AS
-        SELECT vehicle_location, 
-        COUNT(CASE WHEN vehicle_status = 'On the move' THEN 1 END) on_the_move, 
-        COUNT(CASE WHEN vehicle_status = 'Scheduled maintenance' THEN 1 END) scheduled_maintenance,
-        COUNT(CASE WHEN vehicle_status = 'Unscheduled maintenance' THEN 1 END) unscheduled_maintenance
-        FROM ext_s3.fleet
-        GROUP BY 1
-        ;
+        SELECT *, fnc_delay_probability(
+        day_of_week, "hour", days_to_deliver, delivery_distance) delay_probability
+        FROM consignment_delta;
         '''
         
         
