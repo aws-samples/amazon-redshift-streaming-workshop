@@ -83,14 +83,8 @@ def lambda_handler(event, context):
             profile_rec['delivery_date'] = (now + datetime.timedelta(days=days_to_deliver)).isoformat()
             #profile_rec['days_to_deliver'] = days_to_deliver
             mean_distance = 10 +  (days_to_deliver * 100)
-            profile_rec['delivery_distance'] = random.gauss(mean_distance, mean_distance/5)
             profile_rec['revenue'] = random.gauss(mean_distance/6, mean_distance/18)
             profile_rec['cost'] =  profile_rec['revenue'] - (random.random() *  profile_rec['revenue'] /2)
-            profile_rec['delay_probability'] = 'LOW'
-            if random.random()  < 0.3:
-                profile_rec['delay_probability'] = 'MEDIUM'
-            if random.random()  < (0.05 + prob):
-                profile_rec['delay_probability'] = 'HIGH'
             send_data(client_kinesis, profile_rec,
                         str(uuid.uuid4()), stream_name)
             record_count += 1
