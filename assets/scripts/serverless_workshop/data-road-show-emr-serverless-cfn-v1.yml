@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: |
+  Data Serverless Roadshow - EMR Serverless
+
+Parameters:
+  S3BucketPrefix:
+    Default: "data-serverless-workshop"
+    Type: String
+    Description: "Bucket name prefix. Your account id will be added to make it unique"
+
+Resources:
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName:
+        !Join
+        - "-"
+        - [!Ref "S3BucketPrefix", !Ref "AWS::AccountId"]
+
+  EMRServerlessRuntimeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub EMRServerlessRuntimeRole-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Action: 
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - emr-serverless.amazonaws.com
+      Path: "/"
+      Policies:
+      - PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          -
+            Sid: ReadAccessForLogs
+            Effect: "Allow"
+            Action:
+            - s3:GetObject
+            - s3:ListBucket
+            Resource:
+            - arn:aws:s3:::*.elasticmapreduce
+            - arn:aws:s3:::*.elasticmapreduce/*
+          -
+            Sid: FullAccessToS3Bucket
+            Effect: "Allow"
+            Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:ListBucket
+            - s3:DeleteObject
+            Resource:
+            - !Join [ "", ["arn:aws:s3:::", !Ref S3Bucket]]
+            - !Join [ "", ["arn:aws:s3:::", !Ref S3Bucket, "/*"]]
+          -
+            Sid: GlueCreateAndReadDataCatalog
+            Effect: "Allow"
+            Action:
+            - glue:GetDatabase
+            - glue:CreateDatabase
+            - glue:GetDataBases
+            - glue:CreateTable
+            - glue:GetTable
+            - glue:UpdateTable
+            - glue:DeleteTable
+            - glue:GetTables
+            - glue:GetPartition
+            - glue:GetPartitions
+            - glue:CreatePartition
+            - glue:BatchCreatePartition
+            Resource:
+            - '*'  
+        PolicyName: !Sub emr-serverless-policy-${AWS::StackName}
+
+  Cloud9IDE:
+    Type: AWS::Cloud9::EnvironmentEC2
+    Properties:
+      Description: Data Serverless Workshop IDE
+      AutomaticStopTimeMinutes: 30
+      InstanceType: t2.micro
+      Name: Data Serverless Workshop IDE
+
+Outputs:
+  S3Bucket:
+    Description: S3 bucket name
+    Value: !Ref S3Bucket
+
+  EMRServerlessRuntimeRoleARN:
+    Description: EMR serverless runtime role ARN
+    Value: !GetAtt EMRServerlessRuntimeRole.Arn
