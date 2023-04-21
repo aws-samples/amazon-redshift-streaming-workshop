@@ -8,6 +8,7 @@ from aws_cdk import (
     aws_iam as _iam,
     aws_redshift as _redshift,
     aws_secretsmanager as _sm,
+    aws_msk as _msk,
     custom_resources as _cr,
 )
 
@@ -242,4 +243,59 @@ class RedshiftStack(Stack):
                 f"{rs_cluster_role.role_arn}"
             ),
             description=f"Redshift Cluster IAM Role Arn"
+        )
+
+        # Create MSK Serverless cluster        
+        msk_cluster_name = "workshop-cluster"
+        
+        msk_serverless_cluster = _msk.CfnServerlessCluster(self, "MSKServerlessCluster",
+            client_authentication = _msk.CfnServerlessCluster.ClientAuthenticationProperty(
+                sasl=_msk.CfnServerlessCluster.SaslProperty(
+                    iam=_msk.CfnServerlessCluster.IamProperty(
+                        enabled=True
+                    )
+                 )
+            ),
+            cluster_name=msk_cluster_name,
+            vpc_configs=[_msk.CfnServerlessCluster.VpcConfigProperty(
+                subnet_ids=vpc.select_subnets(subnet_type=_ec2.SubnetType.PRIVATE_WITH_NAT).subnet_ids
+            )]
+        )
+        
+        # Create IAM policy for MSK
+        msk_serverless_policy = _iam.ManagedPolicy(self, "MskServerlessWorkshopPolicy",
+            statements=[
+                _iam.PolicyStatement(
+                    effect = _iam.Effect.ALLOW,
+                    actions=["kafka-cluster:Connect", "kafka-cluster:AlterCluster", "kafka-cluster:DescribeCluster"],
+                    resources=[f"arn:aws:kafka:{Aws.REGION}:{Aws.ACCOUNT_ID}:cluster/{msk_cluster_name}/*"]
+                ),
+                _iam.PolicyStatement(
+                    effect = _iam.Effect.ALLOW,
+                    actions=["kafka-cluster:*Topic*", "kafka-cluster:WriteData", "kafka-cluster:ReadData"],
+                    resources=[f"arn:aws:kafka:{Aws.REGION}:{Aws.ACCOUNT_ID}:topic/{msk_cluster_name}/*"]
+                ),
+                _iam.PolicyStatement(
+                    effect = _iam.Effect.ALLOW,
+                    actions=["kafka-cluster:AlterGroup", "kafka-cluster:DescribeGroup"],
+                    resources=[f"arn:aws:kafka:{Aws.REGION}:{Aws.ACCOUNT_ID}:group/{msk_cluster_name}/*"]
+                ),
+                
+            ]
+        )
+            
+        # Create IAM role
+        msk_serverless_role = _iam.Role(
+            self, "MskServerlessRole",
+            assumed_by=_iam.ServicePrincipal("ec2.amazonaws.com"),
+            managed_policies=[msk_serverless_policy]
+        )
+
+        CfnOutput(
+            self,
+            "MSKIAMRole",
+            value=(
+                f"{msk_serverless_role.role_arn}"
+            ),
+            description=f"MSK Serverless Cluster IAM Role Arn"
         )
