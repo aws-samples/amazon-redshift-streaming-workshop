@@ -548,7 +548,7 @@ class MasterStack(Stack):
             ),
             cluster_name=msk_cluster_name,
             vpc_configs=[_msk.CfnServerlessCluster.VpcConfigProperty(
-                subnet_ids=vpc.select_subnets(subnet_type=_ec2.SubnetType.PRIVATE_WITH_NAT).subnet_ids
+                subnet_ids=vpc.select_subnets(subnet_type=_ec2.SubnetType.PUBLIC).subnet_ids
             )]
         )
 
