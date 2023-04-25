@@ -651,30 +651,3 @@ class MasterStack(Stack):
         )
         
         
-        # Deploy MSK Serverless related resources
-        MSK_SERVERLESS_VPC="serverless-workshop-msk-vpc"
-        WORKSHOP_AZ_NUM=3
-        MSK_SERVERLESS_ID="serverless-workshop-msk-serverless-cluster"
-        MSK_CLUSTER_NAME="serverless-workshop-cluster"
-        MSK_TOPIC_NAME="consignment_stream_msk"
-        
-        az_num = min(len(self.availability_zones), WORKSHOP_AZ_NUM)
-        workshop_azs = self.availability_zones[:az_num]
-        
-        # Create VPC for MSK Serverless
-        msk_serverless_vpc = _ec2.Vpc(
-            self,
-            id=MSK_SERVERLESS_VPC,
-            availability_zones=workshop_azs,
-            cidr='11.0.0.0/16',
-            nat_gateways=0,
-            subnet_configuration=[_ec2.SubnetConfiguration(
-                name="MSKServerless-",
-                subnet_type = _ec2.SubnetType.PRIVATE_WITH_EGRESS,
-                cidr_mask = 24,
-                reserved = False
-            )],
-            enable_dns_support=True,
-            enable_dns_hostnames=True,
-        )
-        
