@@ -77,6 +77,8 @@ class MasterStack(Stack):
           description='security group for Amazon MSK client',
           security_group_name=MSK_CLIENT_SG_NAME
         )
+        sg_msk_client.add_ingress_rule(peer=vpc.vpc_default_security_group, connection=_ec2.Port.tcp(9098),
+          description='msk client security group')
         _cdk.Tags.of(sg_msk_client).add('Name', MSK_CLIENT_SG_NAME)
 
         # Security group for MSK Cluster
