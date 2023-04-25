@@ -1,3 +1,9 @@
+import json
+import string
+import random
+
+import aws_cdk as _cdk
+
 from aws_cdk import (
     Aws,
     Duration,
@@ -24,10 +30,8 @@ from aws_cdk import (
     aws_msk as _msk,
     SecretValue
 )
+
 from constructs import Construct
-
-import json
-
 from pathlib import Path
 
 class MasterStack(Stack):
@@ -43,24 +47,84 @@ class MasterStack(Stack):
         kinesis_stream_name="consignment_stream"
         dynamodb_billing_mode=_dynamodb.BillingMode.PAY_PER_REQUEST
         glue_database_name="ext_s3"
-        rs_security_group_name="default"
-        rs_admin_username="admin"
-        rs_workgroup_name="default-wg"
-        rs_namespace_name="default-ns"
-        rs_db_name="dev"
-        rs_admin_password="Welcome!123"
-        msk_cluster_name = "workshop-cluster"
         
+        RS_SECURITY_GROUP_NAME="default"
+        RS_ADMIN_USERNAME="admin"
+        RS_ADMIN_PASSWORD="Welcome!123"
+        RS_WORKGROUP_NAME="default-wg"
+        RS_NAMESPACE_NAME="default-ns"
+        RS_DB_NAME="dev"
+
+        MSK_CLUSTER_NAME = "workshop-cluster"
+        
+        ############################################################
+        # VPC
         vpc = _ec2.Vpc.from_lookup(
             self,
             "VpcId",
             is_default=True
         )
 
+
+        ############################################################
+        # MSK Serverless & related
+        
+        # Security group for MSK Client
+        MSK_CLIENT_SG_NAME = 'msk-client-sg-{}'.format(''.join(random.sample((string.ascii_lowercase), k=5)))
+        sg_msk_client = _ec2.SecurityGroup(self, 'KafkaClientSecurityGroup',
+          vpc=vpc,
+          allow_all_outbound=True,
+          description='security group for Amazon MSK client',
+          security_group_name=MSK_CLIENT_SG_NAME
+        )
+        _cdk.Tags.of(sg_msk_client).add('Name', MSK_CLIENT_SG_NAME)
+
+        # Security group for MSK Cluster
+        MSK_CLUSTER_SG_NAME = 'msk-cluster-sg-{}'.format(''.join(random.sample((string.ascii_lowercase), k=5)))
+        sg_msk_cluster = _ec2.SecurityGroup(self, 'MSKSecurityGroup',
+          vpc=vpc,
+          allow_all_outbound=True,
+          description='security group for Amazon MSK Cluster',
+          security_group_name=MSK_CLUSTER_SG_NAME
+        )
+        sg_msk_cluster.add_ingress_rule(peer=sg_msk_client, connection=_ec2.Port.tcp(9098),
+          description='msk client security group')
+        _cdk.Tags.of(sg_msk_cluster).add('Name', MSK_CLUSTER_SG_NAME)
+
+        # MSK Serverless cluster
+        msk_serverless_cluster = _msk.CfnServerlessCluster(self, "MSKServerlessCfnCluster",
+          client_authentication=_msk.CfnServerlessCluster.ClientAuthenticationProperty(
+            sasl=_msk.CfnServerlessCluster.SaslProperty(
+              iam=_msk.CfnServerlessCluster.IamProperty(
+                enabled=True
+              )
+            )
+          ),
+          cluster_name=MSK_CLUSTER_NAME,
+          vpc_configs=[_msk.CfnServerlessCluster.VpcConfigProperty(
+            subnet_ids=vpc.select_subnets(subnet_type=_ec2.SubnetType.PUBLIC).subnet_ids,
+            security_groups=[sg_msk_client.security_group_id, sg_msk_cluster.security_group_id]
+          )]
+        )
+
+        msk_cluster_name = msk_serverless_cluster.cluster_name
+    
+        # MSK Serverless Outputs
+        _cdk.CfnOutput(self, f'{self.stack_name}-MSKClusterName', value=msk_serverless_cluster.cluster_name,
+          export_name=f'{self.stack_name}-MSKClusterName')
+        _cdk.CfnOutput(self, f'{self.stack_name}-MSKClusterArn', value=msk_serverless_cluster.attr_arn,
+          export_name=f'{self.stack_name}-MSKClusterArn')
+
+
+
+        ############################################################
+        # Redshift Serverless & related
+        
+        # security groups
         rs_security_group = _ec2.SecurityGroup.from_lookup_by_name(
             self,
             "redshiftSecurityGroup",
-            security_group_name=rs_security_group_name,
+            security_group_name=RS_SECURITY_GROUP_NAME,
             vpc=vpc
         )
 
@@ -133,6 +197,51 @@ class MasterStack(Stack):
         )
 
 
+        ############################################################
+        # MSK Serverless related policies
+ 
+        msk_serverless_access_policy_doc = _iam.PolicyDocument()
+        msk_serverless_access_policy_doc.add_statements(_iam.PolicyStatement(**{
+          "effect": _iam.Effect.ALLOW,
+          "resources": ["*"],
+          "actions": [
+            "kafka:GetBootstrapBrokers"
+          ]
+        }))
+    
+        msk_serverless_access_policy_doc.add_statements(_iam.PolicyStatement(**{
+          "effect": _iam.Effect.ALLOW,
+          "resources": [ f"arn:aws:kafka:{_cdk.Aws.REGION}:{_cdk.Aws.ACCOUNT_ID}:cluster/*/*" ],
+          "actions": [
+            "kafka-cluster:Connect",
+            "kafka-cluster:AlterCluster",
+            "kafka-cluster:DescribeCluster"
+          ]
+        }))
+    
+        msk_serverless_access_policy_doc.add_statements(_iam.PolicyStatement(**{
+          "effect": _iam.Effect.ALLOW,
+          "resources": [ f"arn:aws:kafka:{_cdk.Aws.REGION}:{_cdk.Aws.ACCOUNT_ID}:topic/*/*" ],
+          "actions": [
+            "kafka-cluster:*Topic*",
+            "kafka-cluster:WriteData",
+            "kafka-cluster:ReadData"
+          ]
+        }))
+    
+        msk_serverless_access_policy_doc.add_statements(_iam.PolicyStatement(**{
+          "effect": _iam.Effect.ALLOW,
+          "resources": [ f"arn:aws:kafka:{_cdk.Aws.REGION}:{_cdk.Aws.ACCOUNT_ID}:group/*/*" ],
+          "actions": [
+            "kafka-cluster:AlterGroup",
+            "kafka-cluster:DescribeGroup"
+          ]
+        }))       
+
+
+        ############################################################
+        # Roles related to Redshift
+
         sg_role = _iam.Role(
             self, "sagemakerRole",
             assumed_by=_iam.ServicePrincipal(
@@ -158,8 +267,8 @@ class MasterStack(Stack):
             "redshift_credentials",
             description="Redshift credentials",
             secret_string_value=SecretValue.unsafe_plain_text(
-                json.dumps({'username':rs_admin_username, 
-                'password':rs_admin_password})
+                json.dumps({'username':RS_ADMIN_USERNAME, 
+                'password':RS_ADMIN_PASSWORD})
                 ),
             removal_policy=RemovalPolicy.DESTROY,
         )
@@ -179,7 +288,10 @@ class MasterStack(Stack):
                 _iam.ManagedPolicy.from_aws_managed_policy_name(
                     "AmazonSageMakerFullAccess"
                 )
-            ]
+            ],
+            inline_policies={
+                'MSKServerlessAccessPolicy': msk_serverless_access_policy_doc
+            }
         )
 
         _iam.ManagedPolicy(
@@ -220,23 +332,27 @@ class MasterStack(Stack):
         rs_namespace = _rss.CfnNamespace(
             self,
             "redshiftServerlessNamespace",
-            namespace_name=rs_namespace_name,
-            db_name=rs_db_name,
+            namespace_name=RS_NAMESPACE_NAME,
+            db_name=RS_DB_NAME,
             default_iam_role_arn=rs_role.role_arn,
             iam_roles=[rs_role.role_arn],
-            admin_username=rs_admin_username,
-            admin_user_password=rs_admin_password,
+            admin_username=RS_ADMIN_USERNAME,
+            admin_user_password=RS_ADMIN_PASSWORD,
+            log_exports=['userlog', 'connectionlog', 'useractivitylog'],
         )
 
         rs_workgroup = _rss.CfnWorkgroup(
             self,
             "redshiftServerlessWorkgroup",
-            workgroup_name=rs_workgroup_name,
+            workgroup_name=RS_WORKGROUP_NAME,
             base_capacity=32,
+            enhanced_vpc_routing=True,
             publicly_accessible=True,
             namespace_name=rs_namespace.ref,
             security_group_ids=[rs_security_group.security_group_id],
         )
+        
+        rs_workgroup.add_dependency(rs_namespace)
         
         s3_bucket_raw = _s3.Bucket(
             self,
@@ -312,8 +428,8 @@ class MasterStack(Stack):
             handler='initsql.lambda_handler',
             layers = [lambda_layer],
             environment={
-                "WORKGROUP_NAME" : rs_workgroup_name,
-                "DB_NAME" : rs_db_name,
+                "WORKGROUP_NAME" : RS_WORKGROUP_NAME,
+                "DB_NAME" : RS_DB_NAME,
                 "SQL" : init_sql,
                 "SECRET_ARN": redshift_credentials.secret_full_arn,
             },
@@ -359,9 +475,9 @@ class MasterStack(Stack):
         #         service="RedshiftData",
         #         action="executeStatement",
         #         parameters={
-        #             "WorkgroupName": rs_workgroup_name,
+        #             "WorkgroupName": RS_WORKGROUP_NAME,
         #             "SecretArn": redshift_credentials.secret_arn,
-        #             "Database": rs_db_name,
+        #             "Database": RS_DB_NAME,
         #             "Sql": init_sql,
         #         },
         #         physical_resource_id=_cr.PhysicalResourceId.of("physicalResourceStateMachine")
@@ -508,8 +624,8 @@ class MasterStack(Stack):
             handler='refreshmv.lambda_handler',
             layers = [lambda_layer],
             environment={
-                "WORKGROUP_NAME" : rs_workgroup_name,
-                "DB_NAME" : rs_db_name,
+                "WORKGROUP_NAME" : RS_WORKGROUP_NAME,
+                "DB_NAME" : RS_DB_NAME,
                 "SQL" : rs_sql,
                 "SECRET_ARN": redshift_credentials.secret_full_arn,
             },
@@ -535,48 +651,34 @@ class MasterStack(Stack):
         )
         
         
+        # Deploy MSK Serverless related resources
+        MSK_SERVERLESS_VPC="serverless-workshop-msk-vpc"
+        WORKSHOP_AZ_NUM=3
+        MSK_SERVERLESS_ID="serverless-workshop-msk-serverless-cluster"
+        MSK_CLUSTER_NAME="serverless-workshop-cluster"
+        MSK_TOPIC_NAME="consignment_stream_msk"
         
+        az_num = min(len(self.availability_zones), WORKSHOP_AZ_NUM)
+        workshop_azs = self.availability_zones[:az_num]
         
-        # Create MSK Serverless cluster
-        msk_serverless_cluster = _msk.CfnServerlessCluster(self, "MSKServerlessCluster",
-            client_authentication = _msk.CfnServerlessCluster.ClientAuthenticationProperty(
-                sasl=_msk.CfnServerlessCluster.SaslProperty(
-                    iam=_msk.CfnServerlessCluster.IamProperty(
-                        enabled=True
-                    )
-                 )
-            ),
-            cluster_name=msk_cluster_name,
-            vpc_configs=[_msk.CfnServerlessCluster.VpcConfigProperty(
-                subnet_ids=vpc.select_subnets(subnet_type=_ec2.SubnetType.PUBLIC).subnet_ids
-            )]
+        # Create VPC for MSK Serverless
+        msk_serverless_vpc = _ec2.Vpc(
+            self,
+            id=MSK_SERVERLESS_VPC,
+            availability_zones=workshop_azs,
+            cidr='11.0.0.0/16',
+            nat_gateways=0,
+            subnet_configuration=[_ec2.SubnetConfiguration(
+                name="MSKServerless-",
+                subnet_type = _ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                cidr_mask = 24,
+                reserved = False
+            )],
+            enable_dns_support=True,
+            enable_dns_hostnames=True,
         )
-
-        # Create IAM policy for MSK
-        msk_serverless_policy = _iam.ManagedPolicy(self, "MskServerlessWorkshopPolicy",
-            statements=[
-                _iam.PolicyStatement(
-                    effect = _iam.Effect.ALLOW,
-                    actions=["kafka-cluster:Connect", "kafka-cluster:AlterCluster", "kafka-cluster:DescribeCluster"],
-                    resources=[f"arn:aws:kafka:{Aws.REGION}:{Aws.ACCOUNT_ID}:cluster/{msk_cluster_name}/*"]
-                ),
-                _iam.PolicyStatement(
-                    effect = _iam.Effect.ALLOW,
-                    actions=["kafka-cluster:*Topic*", "kafka-cluster:WriteData", "kafka-cluster:ReadData"],
-                    resources=[f"arn:aws:kafka:{Aws.REGION}:{Aws.ACCOUNT_ID}:topic/{msk_cluster_name}/*"]
-                ),
-                _iam.PolicyStatement(
-                    effect = _iam.Effect.ALLOW,
-                    actions=["kafka-cluster:AlterGroup", "kafka-cluster:DescribeGroup"],
-                    resources=[f"arn:aws:kafka:{Aws.REGION}:{Aws.ACCOUNT_ID}:group/{msk_cluster_name}/*"]
-                ),
-                
-            ]
-        )
-            
-        # Create IAM role
-        msk_serverless_role = _iam.Role(
-            self, "MskServerlessRole",
-            assumed_by=_iam.ServicePrincipal("ec2.amazonaws.com"),
-            managed_policies=[msk_serverless_policy]
-        )
+        
+        # Write MSK Serverless arn to file for further initialization
+        f = open("msk_serverless/arn.txt", "w")
+        f.write(f"{msk_serverless_cluster.attr_arn}")
+        f.close()
