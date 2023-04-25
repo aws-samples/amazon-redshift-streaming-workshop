@@ -70,6 +70,7 @@ class MasterStack(Stack):
         # MSK Serverless & related
         
         # Security group for MSK Client
+        sg_vpc_default = _ec2.SecurityGroup.from_lookup_by_name(self, "SecurityGroupLookup", "default", vpc)
         MSK_CLIENT_SG_NAME = 'msk-client-sg-{}'.format(''.join(random.sample((string.ascii_lowercase), k=5)))
         sg_msk_client = _ec2.SecurityGroup(self, 'KafkaClientSecurityGroup',
           vpc=vpc,
@@ -77,7 +78,7 @@ class MasterStack(Stack):
           description='security group for Amazon MSK client',
           security_group_name=MSK_CLIENT_SG_NAME
         )
-        sg_msk_client.add_ingress_rule(peer=vpc.vpc_default_security_group, connection=_ec2.Port.tcp(9098),
+        sg_msk_client.add_ingress_rule(peer=sg_vpc_default, connection=_ec2.Port.tcp(9098),
           description='msk client security group')
         _cdk.Tags.of(sg_msk_client).add('Name', MSK_CLIENT_SG_NAME)
 
