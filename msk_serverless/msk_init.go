@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -29,23 +27,37 @@ var client *kgo.Client
 
 func main() {
 
+	MSK_CLUSTER_NAME := "workshop-cluster"
 	MSK_TOPIC_NAME := "consignment_stream_msk"
 
-	// open arn.txt and read msk serverless cluster arn
-	msk_serverless_arn_byte, err := ioutil.ReadFile("arn.txt")
-	if err != nil {
-		log.Println("Couldn't load arn file: ", err)
-		os.Exit(1)
-	}
-	msk_serverless_arn := fmt.Sprintf("%s", msk_serverless_arn_byte)
-	msk_serverless_arn = strings.TrimSuffix(msk_serverless_arn, "\n")
-	log.Printf("|%s|\n", msk_serverless_arn)
-
-	// get broker
+	// get msk cluster list & broker
 	mySession := session.Must(session.NewSession())
 	creds := credentials.NewCredentials(&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(mySession), ExpiryWindow: 5 * time.Minute})
 	mySession.Config.Credentials = creds
 	svc := kafka.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
+
+	cluster_list, err := svc.ListClustersV2(&kafka.ListClustersV2Input{})
+	if err != nil {
+		log.Printf("ListClusterV2 returns error... %+v\n", err)
+		os.Exit(1)
+	}
+
+	msk_serverless_arn := ""
+	for _, cluster_info := range cluster_list.ClusterInfoList {
+		// log.Printf("looking %v\n", cluster_info)
+		if *(cluster_info.ClusterName) == MSK_CLUSTER_NAME {
+			log.Printf("GOTCHA...\n%v\n", cluster_info)
+			msk_serverless_arn = *(cluster_info.ClusterArn)
+		}
+	}
+	if msk_serverless_arn == "" {
+		log.Printf("Couldn't find workshop msk serverless cluster\n")
+		os.Exit(1)
+	}
+
+	// msk_serverless_arn := *(cluster_list.ClusterInfoList[0].ClusterArn)
+	log.Printf("Got MSK Serverless cluster arn : %s\n", msk_serverless_arn)
+
 	msk_bootstrap_brokers, err := svc.GetBootstrapBrokers(&kafka.GetBootstrapBrokersInput{ClusterArn: aws.String(msk_serverless_arn)})
 	if err != nil {
 		log.Printf("GetBootstrapBrokers returns error... %+v\n", err)
@@ -77,9 +89,6 @@ func main() {
 				return sasl_aws.Auth{}, err
 			}
 			log.Println("got credentials", val.ProviderName)
-			// log.Println("Access key", val.AccessKeyID)
-			// log.Println("Secret key", val.SecretAccessKey)
-			// log.Println("SessionToken", val.SessionToken)
 
 			return sasl_aws.Auth{
 				AccessKey:    val.AccessKeyID,

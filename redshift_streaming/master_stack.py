@@ -678,7 +678,3 @@ class MasterStack(Stack):
             enable_dns_hostnames=True,
         )
         
-        # Write MSK Serverless arn to file for further initialization
-        f = open("msk_serverless/arn.txt", "w")
-        f.write(f"{msk_serverless_cluster.attr_arn}")
-        f.close()
