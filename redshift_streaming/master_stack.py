@@ -349,7 +349,6 @@ class MasterStack(Stack):
             "redshiftServerlessWorkgroup",
             workgroup_name=RS_WORKGROUP_NAME,
             base_capacity=32,
-            enhanced_vpc_routing=True,
             publicly_accessible=True,
             namespace_name=rs_namespace.ref,
             security_group_ids=[rs_security_group.security_group_id],
