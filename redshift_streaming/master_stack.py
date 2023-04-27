@@ -278,6 +278,7 @@ class MasterStack(Stack):
         
         rs_role = _iam.Role(
             self, "redshiftClusterRole",
+            role_name="RedshiftClusterRole",
             assumed_by=_iam.CompositePrincipal(
                 _iam.ServicePrincipal("redshift.amazonaws.com"),
                 _iam.ServicePrincipal("sagemaker.amazonaws.com")),
