@@ -198,6 +198,7 @@ func main() {
 			fmt.Println(err)
 			return
 		}
+		wg.Add(1)
 		record := &kgo.Record{Topic: MSK_TOPIC_NAME, Value: _jbytearr}
 		client.Produce(ctx, record, func(_ *kgo.Record, err error) {
 			defer wg.Done()
