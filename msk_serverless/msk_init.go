@@ -3,10 +3,15 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
+	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"os"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -23,12 +28,32 @@ import (
 	sasl_aws "github.com/twmb/franz-go/pkg/sasl/aws"
 )
 
+type MSKRecord struct {
+	Consignmentid       int     `json:"consignmentid"`
+	Consignment_date    string  `json:"consignment_date"`
+	Destination_address string  `json:"destination_address"`
+	Destination_state   string  `json:"destination_state"`
+	Destination_lat     float32 `json:"destination_lat"`
+	Destination_long    float32 `json:"destination_long"`
+	Origin_address      string  `json:"origin_address"`
+	Origin_state        string  `json:"origin_state"`
+	Origin_lat          float32 `json:"origin_lat"`
+	Origin_long         float32 `json:"origin_long"`
+	Userid              int     `json:"userid"`
+	Delivery_date       string  `json:"delivery_date"`
+	Days_to_deliver     int     `json:"days_to_deliver"`
+	Revenue             int     `json:"revenue"`
+	Cost                int     `json:"cost"`
+}
+
 var client *kgo.Client
 
 func main() {
 
 	MSK_CLUSTER_NAME := "workshop-cluster"
 	MSK_TOPIC_NAME := "consignment_stream_msk"
+	PRODUCE_RECORD_NUM := 100000
+	SLEEP_TIME := 0.3
 
 	// get msk cluster list & broker
 	mySession := session.Must(session.NewSession())
@@ -139,6 +164,51 @@ func main() {
 		log.Println("topic already exists", MSK_TOPIC_NAME)
 	}
 
-	// produce 1,000,000 msg to topic
+	// periodically produce msgs to topic
+	_rseed := rand.NewSource(time.Now().UnixNano())
+	_rd := rand.New(_rseed)
+	ctx := context.Background()
+	var wg sync.WaitGroup
+
+	for _idx := 1; _idx <= PRODUCE_RECORD_NUM; _idx++ {
+		days_to_deliver := _rd.Intn(5) + 2
+		mean_distance := 10 + (days_to_deliver * 100)
+		rev := _rd.Intn(mean_distance/6-mean_distance/18) + mean_distance/6
+		_v := &MSKRecord{
+			Consignmentid:       _idx,
+			Consignment_date:    time.Now().UTC().Format("2006-01-02T15:04:05-0700"),
+			Destination_address: "address " + strconv.Itoa(_rd.Intn(100000)),
+			Destination_state:   fmt.Sprintf("%0d", _rd.Intn(20)),
+			Destination_lat:     _rd.Float32()*6.2 - 37.643,
+			Destination_long:    _rd.Float32()*8.3 + 141.224,
+			Origin_address:      "address " + strconv.Itoa(_rd.Intn(100000)),
+			Origin_state:        fmt.Sprintf("%0d", _rd.Intn(20)),
+			Origin_lat:          _rd.Float32()*6.2 - 37.643,
+			Origin_long:         _rd.Float32()*8.3 + 141.224,
+			Userid:              _rd.Intn(15521),
+			Delivery_date:       time.Now().AddDate(0, 0, days_to_deliver).UTC().Format("2006-01-02T15:04:05-0700"),
+			Days_to_deliver:     days_to_deliver,
+			Revenue:             rev,
+			Cost:                rev - (int(_rd.Float32()*float32(rev)) / 2),
+		}
+
+		// produce(_idx, _v)
+		_jbytearr, err := json.Marshal(_v)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		record := &kgo.Record{Topic: MSK_TOPIC_NAME, Value: _jbytearr}
+		client.Produce(ctx, record, func(_ *kgo.Record, err error) {
+			defer wg.Done()
+			if err != nil {
+				log.Println("Producer error: %v\n", err)
+			}
+		})
+
+		time.Sleep(time.Duration(SLEEP_TIME*float64(1000)) * time.Millisecond)
+	}
+
+	wg.Wait()
 
 }
