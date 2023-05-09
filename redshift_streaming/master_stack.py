@@ -403,7 +403,7 @@ class MasterStack(Stack):
         FUNCTION fnc_delay_probability
         IAM_ROLE default
         SETTINGS (
-            MAX_RUNTIME 1800, --seconds
+            MAX_RUNTIME 1800,
             S3_BUCKET '{s3_bucket_raw.bucket_name}' 
         );
 
