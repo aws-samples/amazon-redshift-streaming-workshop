@@ -1,37 +1,28 @@
 #!/usr/bin/env python3
+import os
+
 import aws_cdk as cdk
 
-from redshift_streaming.ingestion_stack import IngestionStack
-from redshift_streaming.redshift_stack import RedshiftStack
-from redshift_streaming.stepfunction_stack import StepFunctionStack
-from redshift_streaming.grafana_stack import GrafanaStack
+from cdk.cdk_stack import CdkStack
 
-import constants
 
 app = cdk.App()
+CdkStack(app, "CdkStack",
+    # If you don't specify 'env', this stack will be environment-agnostic.
+    # Account/Region-dependent features and context lookups will not work,
+    # but a single synthesized template can be deployed anywhere.
 
-ingestion_stack = IngestionStack(app,
-                                 "IngestionStack",
-                                 glue_database_name=constants.DEV_GLUE_DATABASE_NAME,
-                                 kinesis_retention_period=constants.DEV_KINESIS_RETENTION_PERIOD,
-                                 kinesis_stream_mode=constants.DEV_KINESIS_STREAM_MODE,
-                                 kinesis_encryption=constants.DEV_KINESIS_ENCRYPTION,
-                                 dynamodb_billing_mode=constants.DEV_DYNAMODB_BILLING_MODE,
-                                 env=constants.DEV_ENV)
-redshift_stack = RedshiftStack(app,
-                               "RedshiftStack",
-                               consignment_stream=ingestion_stack.consignment_stream,
-                               s3_bucket_raw=ingestion_stack.s3_bucket_raw,
-                               redshift_max_azs=constants.DEV_REDSHIFT_MAX_AZS,
-                               redshift_cluster_type=constants.DEV_REDSHIFT_CLUSTER_TYPE,
-                               redshift_number_of_nodes=constants.DEV_REDSHIFT_NUM_NODES,
-                               redshift_db_name=constants.DEV_REDSHIFT_DB_NAME,
-                               redshift_master_username=constants.DEV_REDSHIFT_MASTER_USERNAME,
-                               redshift_node_type=constants.DEV_REDSHIFT_NODE_TYPE,
-                               env=constants.DEV_ENV)
-sf_stack = StepFunctionStack(app,
-                             "StepFunctionStack",
-                             rs_cluster=redshift_stack.rs_cluster,
-                             env=constants.DEV_ENV)
+    # Uncomment the next line to specialize this stack for the AWS Account
+    # and Region that are implied by the current CLI configuration.
+
+    env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region=os.getenv('CDK_DEFAULT_REGION')),
+    #env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region='us-west-2'),
+    # Uncomment the next line if you know exactly what Account and Region you
+    # want to deploy the stack to. */
+
+    #env=cdk.Environment(account='123456789012', region='us-east-1'),
+
+    # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
+    )
 
 app.synth()
