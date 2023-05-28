@@ -115,12 +115,10 @@ class CdkStack(Stack):
         rs_security_group.add_ingress_rule(glue_security_group, _ec2.Port.tcp(5439))
         
         # Auto generate Redshift password
-        redshift_password = _sm.Secret(
+        redshift_password = _sm.Secret.from_secret_name_v2(
             self,
             "redshift_password",
-            description="Redshift password",
-            generate_secret_string=_sm.SecretStringGenerator(exclude_punctuation=True),
-            removal_policy=RemovalPolicy.DESTROY,
+            name="REDSHIFT_PASSWORD"
         )
         
         # Create another secret in format required by RS Data API
