@@ -118,7 +118,7 @@ class CdkStack(Stack):
         redshift_password = _sm.Secret.from_secret_name_v2(
             self,
             "redshift_password",
-            name="REDSHIFT_PASSWORD"
+            secret_name="REDSHIFT_PASSWORD"
         )
         
         # Create another secret in format required by RS Data API
