@@ -7,7 +7,7 @@ from awsglue.job import Job
 from pyspark.context import SparkContext
 import boto3
 
-args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+args = getResolvedOptions(sys.argv, ['JOB_NAME', 's3_target_bucket'])
 
 sc = SparkContext()
 glueContext = GlueContext(sc)
@@ -19,7 +19,7 @@ job.init(args['JOB_NAME'], args)
 client = boto3.client('glue')
 
 
-s3bucket = '<REPLACE WITH TRANSFORMED BUCKET>'
+s3bucket = args['s3_target_bucket']
 sourcedatabaseName = 'raw_db'
 targetdatabaseName = 'transformed_db'
 

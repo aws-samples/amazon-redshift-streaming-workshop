@@ -551,52 +551,54 @@ class CdkStack(Stack):
             self,
             "MWAAWebserverUrl",
             value=f"https://{airflow_env.attr_webserver_url}/home",
-            description="MWAA-Server-URL",
+            description="MWAA URL",
         )
         
         CfnOutput(
             self,
             "RedshiftServerlessEndpoint",
-            value=f"consumer-{rs_workgroup_name}.{Aws.ACCOUNT_ID}.{Aws.REGION}.redshift-serverless.amazonaws.com",
-            description=f"Redshift-Serverless-Endpoint",
+            value=f"{rs_workgroup_name}.{Aws.ACCOUNT_ID}.{Aws.REGION}.redshift-serverless.amazonaws.com",
+            description=f"Redshift serverless endpoint",
         )
         
         CfnOutput(
             self,
             "RedshiftMasterUser",
             value=rs_admin_username,
-            description=f"Redshift-Username",
+            description=f"Redshift username",
         )
 
         CfnOutput(
             self,
             "RedshiftClusterPassword",
-            value=(
-                f"https://console.aws.amazon.com/secretsmanager/home?region="
-                f"{Aws.REGION}"
-                f"#/secret?name="
-                f"{redshift_password.secret_arn}"
-            ),
-            description=f"Redshift-Passwordr",
+            value=(redshift_password.secret_value.unsafe_unwrap()),
+            description=f"Redshift password",
         )
         
         CfnOutput(
             self,
             "out-s3-raw",
             value=s3_bucket_raw.bucket_name,
-            description="S3-Raw",
+            description="Raw bucket name",
         )
         
         CfnOutput(
             self,
             "out-s3-mwaa",
             value=s3_bucket_mwaa.bucket_name,
-            description="S3-MWAA",
+            description="MWAA bucket name",
         )
         
         CfnOutput(
             self,
             "out-s3-transformed",
             value=s3_bucket_transformed.bucket_name,
-            description="S3-Transformed",
+            description="Transformed bucket name",
+        )
+        
+        CfnOutput(
+            self,
+            "out-crawler",
+            value=crawler_raw.name,
+            description="Crawler name",
         )
