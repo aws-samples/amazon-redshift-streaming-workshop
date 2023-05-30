@@ -408,6 +408,7 @@ class CdkStack(Stack):
                 _iam.ServicePrincipal("airflow-env.amazonaws.com"),
                 _iam.ServicePrincipal("airflow.amazonaws.com"),
             ),
+            role_name="WSAirflowRole",
             managed_policies=[
                 _iam.ManagedPolicy.from_aws_managed_policy_name(
                     "SecretsManagerReadWrite"
