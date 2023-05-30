@@ -600,6 +600,6 @@ class CdkStack(Stack):
         CfnOutput(
             self,
             "out-crawler",
-            value=crawler_raw.name,
+            value=crawler_raw.ref,
             description="Crawler name",
         )
