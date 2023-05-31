@@ -572,7 +572,7 @@ class CdkStack(Stack):
         CfnOutput(
             self,
             "RedshiftClusterPassword",
-            value=(redshift_password.secret_value.unsafe_unwrap()),
+            value='Welcome!123',
             description=f"Redshift password",
         )
         
