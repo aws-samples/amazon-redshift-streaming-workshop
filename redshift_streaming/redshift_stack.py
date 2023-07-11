@@ -123,6 +123,7 @@ class RedshiftStack(Stack):
         rs_cluster = _redshift.CfnCluster(
             self,
             "redshiftStreamingCluster",
+            cluster_identifier="rscluster",
             cluster_type=redshift_cluster_type,
             number_of_nodes=redshift_number_of_nodes,
             db_name=redshift_db_name,
