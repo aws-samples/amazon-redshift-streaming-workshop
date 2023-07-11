@@ -162,16 +162,6 @@ class RedshiftStack(Stack):
         DATABASE 'ext_s3'
         IAM_ROLE default;
 
-        CREATE MODEL ml_delay_prediction
-        FROM (SELECT * FROM ext_s3.consignment_train)
-        TARGET probability
-        FUNCTION fnc_delay_probability
-        IAM_ROLE default
-        SETTINGS (
-            MAX_RUNTIME 1800, --seconds
-            S3_BUCKET '{s3_bucket_raw.bucket_name}' 
-        );
-
         CREATE MATERIALIZED VIEW fleet_summary AS
         SELECT vehicle_location, 
         COUNT(CASE WHEN vehicle_status = 'On the move' THEN 1 END) on_the_move, 
