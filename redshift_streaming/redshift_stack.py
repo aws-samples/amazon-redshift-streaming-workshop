@@ -57,6 +57,12 @@ class RedshiftStack(Stack):
                 ),
                 _iam.ManagedPolicy.from_aws_managed_policy_name(
                     "AmazonSageMakerFullAccess"
+                ),
+                _iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "AmazonKinesisFullAccess"
+                ),
+                _iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "AWSGlueConsoleFullAccess"
                 )
             ]
         )
